@@ -248,37 +248,59 @@ function Should-Install { param([string]$Cat) -not $Only -or ($Only -contains $C
 # --- git ---
 
 if (Should-Install 'git') {
-    Invoke-Step -Name "git: deploy .gitconfig (identity preserved)" -Tags @('profiles','git') -ContinueOnError -SkipOnDryRun -Action {
+    Invoke-Step -Name "git: deploy .gitconfig (preserve local additions)" -Tags @('profiles','git') -ContinueOnError -SkipOnDryRun -Action {
         $src = Join-Path $repoRoot 'profiles\git\.gitconfig'
         $dst = Join-Path $HOME '.gitconfig'
 
-        # Snapshot identity via git itself (reads from current ~/.gitconfig).
-        # If git isn't installed yet, there's nothing to preserve.
-        $existingName  = ''
-        $existingEmail = ''
-        if (Get-Command git -ErrorAction SilentlyContinue) {
-            $existingName  = (& git config --global --get user.name  2>$null) -join ''
-            $existingEmail = (& git config --global --get user.email 2>$null) -join ''
+        # Snapshot the FULL current global config before overwrite. Anything
+        # the user added locally that isn't in the new template (identity,
+        # maintenance.repo entries, credential blocks, includeIf paths,
+        # custom aliases, …) gets restored afterward. Template wins for
+        # keys present in BOTH — that's the point of redeploying.
+        $beforeEntries = @()
+        $hasGit = [bool](Get-Command git -ErrorAction SilentlyContinue)
+        if ($hasGit) {
+            $beforeEntries = @(& git config --global --list 2>$null) | Where-Object { $_ }
         } else {
-            Write-Log -Level DEBUG -Message "    git not on PATH yet — no identity to preserve"
+            Write-Log -Level DEBUG -Message "    git not on PATH yet — nothing to preserve"
         }
 
         # Force copy (never symlink) for .gitconfig. The repo file is identity-
         # free by design; a symlink would route `git config --global` writes
-        # INTO the repo file, leaking personal identity into a shared file.
+        # INTO the repo file, leaking personal config into a shared file.
         Copy-OrLink -Source $src -Target $dst -Force:$Force
 
-        if ($existingName) {
-            if ($PSCmdlet.ShouldProcess("user.name", "git config --global = $existingName")) {
-                & git config --global user.name $existingName | Out-Null
-                Write-Log -Level DEBUG -Message "    restored user.name  = $existingName"
+        if ($hasGit -and $beforeEntries.Count -gt 0) {
+            $afterEntries = @(& git config --global --list 2>$null) | Where-Object { $_ }
+            $afterKeys = @($afterEntries | ForEach-Object { ($_ -split '=', 2)[0] }) | Sort-Object -Unique
+
+            # Group "lost" entries by key. A key with zero entries in the new
+            # template (i.e. purely a user addition) gets all its values re-
+            # added. A key with entries in the new template (template wins)
+            # is skipped.
+            $lostByKey = @{}
+            foreach ($entry in $beforeEntries) {
+                $parts = $entry -split '=', 2
+                $key   = $parts[0]
+                $value = if ($parts.Count -gt 1) { $parts[1] } else { '' }
+                if ($key -notin $afterKeys) {
+                    if (-not $lostByKey.ContainsKey($key)) { $lostByKey[$key] = @() }
+                    $lostByKey[$key] += $value
+                }
             }
-        }
-        if ($existingEmail) {
-            if ($PSCmdlet.ShouldProcess("user.email", "git config --global = $existingEmail")) {
-                & git config --global user.email $existingEmail | Out-Null
-                Write-Log -Level DEBUG -Message "    restored user.email = $existingEmail"
+
+            foreach ($key in $lostByKey.Keys | Sort-Object) {
+                foreach ($value in $lostByKey[$key]) {
+                    if ($PSCmdlet.ShouldProcess($key, "git config --global --add (= $value)")) {
+                        & git config --global --add $key $value | Out-Null
+                        Write-Log -Level DEBUG -Message "    restored $key = $value"
+                    }
+                }
             }
+
+            $restoredCount = ($lostByKey.Values | ForEach-Object { $_.Count } | Measure-Object -Sum).Sum
+            $totalCount    = $beforeEntries.Count
+            Write-Log -Level INFO -Message "  Preserved $restoredCount local entr$(if ($restoredCount -eq 1) { 'y' } else { 'ies' }) (of $totalCount in old config); $($afterEntries.Count) entries from the new template"
         }
     }
 }

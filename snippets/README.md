@@ -34,6 +34,19 @@ Every snippet:
 - Idempotent: no-op if entry not present.
 - Bonus: dedupes the remaining PATH while writing back — some installers leave duplicate or empty entries.
 
+### `Enable-GitMaintenance.ps1` — opt into git's background maintenance
+
+```powershell
+cd C:\code\my-repo
+.\snippets\Enable-GitMaintenance.ps1                            # current dir
+.\snippets\Enable-GitMaintenance.ps1 -Path 'C:\code\foo'        # a specific repo
+.\snippets\Enable-GitMaintenance.ps1 -Tree "$env:USERPROFILE\code"  # every .git repo under a tree
+```
+
+Wraps `git maintenance start`. Each enrolled repo gets a `maintenance.repo = <path>` line added to `~/.gitconfig`; git's Windows Task Scheduler tasks then run background `prefetch`/`gc`/`commit-graph` updates on a schedule. Tree mode is the "set and forget" — re-run after major repo reshuffles to catch new clones.
+
+These entries survive `Install-Profiles.ps1`'s gitconfig redeploys: the deploy preserves any key that isn't in the new template, and `maintenance.repo` is never in the repo's template.
+
 ### `Get-PathEntries.ps1` — display PATH, one entry per line
 
 ```powershell
