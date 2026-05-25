@@ -1,22 +1,30 @@
 {
   "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
-  "CreationDate": "2026-05-25",
+  "CreationDate": "2026-05-26",
   "Sources": [
     {
       "Packages": [
         { "PackageIdentifier": "Microsoft.PowerShell" },
-        { "PackageIdentifier": "Microsoft.WindowsTerminal" },
-        { "PackageIdentifier": "Microsoft.VisualStudioCode" },
         { "PackageIdentifier": "Git.Git" },
         { "PackageIdentifier": "GitHub.cli" },
         { "PackageIdentifier": "JanDeDobbeleer.OhMyPosh" },
+        { "PackageIdentifier": "Microsoft.VisualStudioCode" },
         { "PackageIdentifier": "Microsoft.PowerToys" },
+        { "PackageIdentifier": "Microsoft.DotNet.SDK.10" },
+        { "PackageIdentifier": "Docker.DockerDesktop" },
         { "PackageIdentifier": "Mozilla.Firefox" },
-        { "PackageIdentifier": "Brave.Brave" },
+        { "PackageIdentifier": "Google.Chrome" },
+        { "PackageIdentifier": "Notepad++.Notepad++" },
+        { "PackageIdentifier": "Obsidian.Obsidian" },
+        { "PackageIdentifier": "voidtools.Everything" },
+        { "PackageIdentifier": "Insync.Insync" },
         { "PackageIdentifier": "7zip.7zip" },
+        { "PackageIdentifier": "Bitwarden.CLI" },
+        { "PackageIdentifier": "geeksoftwareGmbH.PDF24Creator" },
+        { "PackageIdentifier": "AutoHotkey.AutoHotkey" },
         { "PackageIdentifier": "VideoLAN.VLC" },
         { "PackageIdentifier": "AntibodySoftware.WizTree" },
-        { "PackageIdentifier": "voidtools.Everything" },
+        { "PackageIdentifier": "Logitech.OptionsPlus" },
         { "PackageIdentifier": "MartiCliment.UniGetUI" }
       ],
       "SourceDetails": {

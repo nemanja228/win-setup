@@ -1,13 +1,16 @@
 {
   "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
-  "CreationDate": "2026-05-25",
+  "CreationDate": "2026-05-26",
   "Sources": [
     {
       "Packages": [
-        { "PackageIdentifier": "Microsoft.VisualStudio.2022.Professional" },
+        { "PackageIdentifier": "JetBrains.Toolbox" },
         { "PackageIdentifier": "Microsoft.SQLServerManagementStudio" },
-        { "PackageIdentifier": "Microsoft.DotNet.SDK.9" },
-        { "PackageIdentifier": "Microsoft.DotNet.SDK.8" }
+        { "PackageIdentifier": "Microsoft.DotNet.SDK.8" },
+        { "PackageIdentifier": "Schniz.fnm" },
+        { "PackageIdentifier": "pyenv-win.pyenv-win" },
+        { "PackageIdentifier": "WinMerge.WinMerge" },
+        { "PackageIdentifier": "WinSCP.WinSCP" }
       ],
       "SourceDetails": {
         "Argument": "https://cdn.winget.microsoft.com/cache",

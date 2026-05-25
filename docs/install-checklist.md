@@ -134,11 +134,11 @@ What it covers (each step idempotent, tag-filtered, logged):
 
 **App tiers** — `bootstrap.ps1 -Tiers common,professional,personal` (default: all three). See [`../resources/winget/`](../resources/winget/) for the tier-file contents:
 
-| Tier | Examples |
+| Tier | What's in it |
 |---|---|
-| `common` | PowerShell, Terminal, VS Code, Git, gh, OhMyPosh, PowerToys, browsers, 7zip, VLC, Everything, WizTree, UniGetUI |
-| `professional` | VS 2022 Pro, SSMS, .NET SDKs |
-| `personal` | Obsidian, Spotify, REAPER, LatencyMon |
+| `common` | PowerShell 7, Git, gh, OhMyPosh, VS Code, PowerToys, .NET 10 SDK, Docker Desktop, Firefox, Chrome, Notepad++, Obsidian, Everything, Insync, 7zip, Bitwarden CLI, PDF24, AutoHotkey, VLC, WizTree, Logitech Options+, UniGetUI |
+| `professional` | JetBrains Toolbox, SSMS, .NET 8 SDK (LTS), fnm, pyenv-win, WinMerge, WinSCP |
+| `personal` | LatencyMon, REAPER, GeForce Now |
 
 ## 11. Windows Terminal, PowerShell, Oh-My-Posh
 
@@ -164,27 +164,49 @@ See [`terminal-profile.md`](terminal-profile.md) for what each file does and whe
 
 Installs via winget and adds the install dir to user PATH.
 
-## 14. Notepad++ + plugins
+## 14. Notepad++ + VS Code post-install hooks
 
-Notepad++ install isn't in the default tiers — install ad hoc and the post-install hook handles plugins:
+Notepad++ is in `apps.common.json`, so it installs in step 10. The plugin sideload (`Compare`, `XML Tools`, etc.) runs automatically via the post-install hook at [`../post-install/Notepad++.Notepad++.ps1`](../post-install/Notepad++.Notepad++.ps1).
+
+Same for VS Code: [`../post-install/Microsoft.VisualStudioCode.ps1`](../post-install/Microsoft.VisualStudioCode.ps1) installs a curated extension set after the apps step.
+
+If you skip the apps step initially and want to re-run just the post-install hooks later:
 
 ```powershell
-winget install --id Notepad++.Notepad++ -e
 .\bootstrap.ps1 -Steps extras
 ```
 
-The plugin sideload lives at [`../post-install/Notepad++.Notepad++.ps1`](../post-install/Notepad++.Notepad++.ps1).
-
 ## 15. Manual app installs / configuration
 
-Not all apps install cleanly via winget, and some need post-install attention that scripts can't do for you. See `TODO-post-install.txt` on the Desktop after `bootstrap.ps1` for the up-to-date list. Typical residuals:
+Some apps either aren't on winget, are version-pinned to a release winget doesn't carry, or need vendor-specific account setup that scripts can't automate. See also `TODO-post-install.txt` on the Desktop after `bootstrap.ps1`.
 
-- Audient EVO 4 driver (manual download from audient.com)
-- MyASUS settings (Battery Care, Fan Mode — UI-only, no API)
-- Office activation (Word → File → Account → sign in)
-- Visual Studio workloads (.NET desktop, ASP.NET, Azure dev)
-- BitLocker (intentionally not automated)
-- BIOS settings double-check (SVM / Secure Boot / fTPM enabled)
+### Apps not on winget (or version-pinned)
+
+- [ ] **Microsoft Office** — download via Office Deployment Tool from <https://www.microsoft.com/en-us/download/details.aspx?id=49117> with custom XML config (generate at <https://config.office.com>). Install Word / Excel / PowerPoint / Outlook, skip OneNote / Teams / Publisher / Skype. Activate by signing into Word > File > Account.
+- [ ] **CoolerMaster MasterPlus+** — for MK750 keyboard customization. Download from <https://www.coolermaster.com/en-global/software/masterplus/>.
+- [ ] **Guitar Pro 7.5** — winget only carries v8; if you specifically want 7.5, download from <https://www.guitar-pro.com/> (account required).
+- [ ] **Native Instruments Guitar Rig** — install via **Native Access** from <https://www.native-instruments.com/en/specials/native-access-2/>, then use Native Access to install Guitar Rig.
+- [ ] **Arturia keyboard software** — install via **Arturia Software Center** from <https://www.arturia.com/support/downloads&manuals>, then use ASC to install your specific keyboard's product page.
+
+### Vendor / hardware drivers not in MyASUS Live Update
+
+- [ ] **Audient EVO 4 driver** — download from <https://audient.com/products/audio-interfaces/evo-4/downloads/>. Ships ASIO + the EVO standalone mixer.
+
+### Serbian eUprava (electronic government) tools
+
+These all require a citizen ID card with chip (lična karta) and a USB smart-card reader. Install in this order:
+
+- [ ] **Reader driver** — usually generic CCID-compliant; Windows finds it automatically. If yours needs vendor driver, install before card middleware.
+- [ ] **TrustEdgeID** middleware — <https://www.eid.gov.rs/> (preuzimanje softvera). Required for card recognition.
+- [ ] **Čelik** — official card reader app. <https://www.mup.gov.rs/wps/portal/sr/usluge/aplikacije/celik>.
+- [ ] **ePorezi** — tax-portal client. <https://eporezi.purs.gov.rs/>.
+
+### Manual settings and activation
+
+- [ ] **Office activation** — sign in via Word → File → Account.
+- [ ] **BitLocker** — intentionally not automated. Configure via Settings → System → Storage if desired.
+- [ ] **BIOS settings double-check** — SVM / Secure Boot / fTPM enabled (see [`bios.md`](bios.md)).
+- [ ] **Vendor app settings** — Battery Care, Fan Mode, etc. See your machine doc under [`machines/`](machines/).
 
 ## 16. After Windows feature updates
 

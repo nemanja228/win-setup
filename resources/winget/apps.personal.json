@@ -1,13 +1,12 @@
 {
   "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
-  "CreationDate": "2026-05-25",
+  "CreationDate": "2026-05-26",
   "Sources": [
     {
       "Packages": [
-        { "PackageIdentifier": "Obsidian.Obsidian" },
-        { "PackageIdentifier": "Spotify.Spotify" },
-        { "PackageIdentifier": "REAPER.REAPER" },
-        { "PackageIdentifier": "Resplendence.LatencyMon" }
+        { "PackageIdentifier": "Resplendence.LatencyMon" },
+        { "PackageIdentifier": "Cockos.REAPER" },
+        { "PackageIdentifier": "NVIDIA.GeForceNow" }
       ],
       "SourceDetails": {
         "Argument": "https://cdn.winget.microsoft.com/cache",
