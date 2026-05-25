@@ -1,0 +1,165 @@
+Windows Registry Editor Version 5.00
+
+; ============================================================================
+; win-setup / tweaks.reg
+; UI, privacy, and behaviour tweaks not covered by Win11Debloat or O&O ShutUp10++.
+; Applied by bootstrap.ps1 via:  reg import tweaks.reg
+; ============================================================================
+
+; ----- File Explorer ---------------------------------------------------------
+
+; Show file extensions (HideFileExt=0 -> show)
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"HideFileExt"=dword:00000000
+
+; Show hidden files
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"Hidden"=dword:00000001
+
+; Show protected operating system files (set to 0 if you find this too noisy)
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"ShowSuperHidden"=dword:00000000
+
+; Open File Explorer to "This PC" instead of Home
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"LaunchTo"=dword:00000001
+
+; Disable recent files in Quick Access
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer]
+"ShowRecent"=dword:00000000
+"ShowFrequent"=dword:00000000
+
+; ----- Search & Start menu ---------------------------------------------------
+
+; Disable Bing / web search in Start menu
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Explorer]
+"DisableSearchBoxSuggestions"=dword:00000001
+
+; Disable "search highlights" (suggestions in search box)
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Feeds\DSB]
+"ShowDynamicContent"=dword:00000000
+
+; Hide search box on taskbar (0 = hidden, 1 = icon, 2 = box, 3 = icon+label)
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Search]
+"SearchboxTaskbarMode"=dword:00000001
+
+; ----- Taskbar ---------------------------------------------------------------
+
+; Hide Widgets button
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"TaskbarDa"=dword:00000000
+
+; Hide Task View button
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"ShowTaskViewButton"=dword:00000000
+
+; Hide Chat / Teams Personal button
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"TaskbarMn"=dword:00000000
+
+; Show "End Task" in taskbar right-click
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\TaskbarDeveloperSettings]
+"TaskbarEndTask"=dword:00000001
+
+; ----- Copilot / AI ----------------------------------------------------------
+
+; Disable Windows Copilot (per-user policy)
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\WindowsCopilot]
+"TurnOffWindowsCopilot"=dword:00000001
+
+; Disable Recall (Win11 24H2+)
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\WindowsAI]
+"DisableAIDataAnalysis"=dword:00000001
+
+; Disable Click to Do
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\WindowsAI]
+"DisableClickToDo"=dword:00000001
+
+; ----- Privacy ---------------------------------------------------------------
+
+; Disable advertising ID
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo]
+"Enabled"=dword:00000000
+
+; Disable tailored experiences with diagnostic data
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Privacy]
+"TailoredExperiencesWithDiagnosticDataEnabled"=dword:00000000
+
+; Disable "Let websites provide locally relevant content by accessing my language list"
+[HKEY_CURRENT_USER\Control Panel\International\User Profile]
+"HttpAcceptLanguageOptOut"=dword:00000001
+
+; Disable app launch tracking
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"Start_TrackProgs"=dword:00000000
+
+; Disable inking & typing personalisation
+[HKEY_CURRENT_USER\Software\Microsoft\InputPersonalization]
+"RestrictImplicitInkCollection"=dword:00000001
+"RestrictImplicitTextCollection"=dword:00000001
+[HKEY_CURRENT_USER\Software\Microsoft\InputPersonalization\TrainedDataStore]
+"HarvestContacts"=dword:00000000
+
+; ----- Notifications / suggestions / ads -------------------------------------
+
+; Disable Start menu suggestions
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager]
+"SubscribedContent-338388Enabled"=dword:00000000
+"SubscribedContent-338389Enabled"=dword:00000000
+"SubscribedContent-338393Enabled"=dword:00000000
+"SubscribedContent-310093Enabled"=dword:00000000
+"SubscribedContent-353698Enabled"=dword:00000000
+"SystemPaneSuggestionsEnabled"=dword:00000000
+"SilentInstalledAppsEnabled"=dword:00000000
+"OemPreInstalledAppsEnabled"=dword:00000000
+"PreInstalledAppsEnabled"=dword:00000000
+"PreInstalledAppsEverEnabled"=dword:00000000
+"SubscribedContentEnabled"=dword:00000000
+
+; Disable lock screen tips / spotlight overlay
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager]
+"RotatingLockScreenEnabled"=dword:00000000
+"RotatingLockScreenOverlayEnabled"=dword:00000000
+"SubscribedContent-338387Enabled"=dword:00000000
+
+; Disable "Get the most out of Windows" lock screen suggestions
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement]
+"ScoobeSystemSettingEnabled"=dword:00000000
+
+; Disable Settings home page suggestions ("recommended actions")
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"NavPaneShowAllFolders"=dword:00000001
+
+; ----- Storage Sense ---------------------------------------------------------
+
+; Disable Storage Sense
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy]
+"01"=dword:00000000
+
+; ----- Edge-specific (no startup boost / no preload / no startup link) -------
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"StartupBoostEnabled"=dword:00000000
+
+[HKEY_CURRENT_USER\Software\Policies\Microsoft\MicrosoftEdge\Main]
+"AllowPrelaunch"=dword:00000000
+"AllowTabPreloading"=dword:00000000
+
+; ----- Activity history ------------------------------------------------------
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System]
+"EnableActivityFeed"=dword:00000000
+"PublishUserActivities"=dword:00000000
+"UploadUserActivities"=dword:00000000
+
+; ----- File Explorer: dark scrollbars & no transparency for performance ------
+; (Optional — uncomment if you want minimal eye candy on battery)
+; [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+; "EnableTransparency"=dword:00000000
+
+; ----- Mouse: disable acceleration (better for FPS / DAW work) ---------------
+; (Optional — comment out if you want default Windows mouse behaviour)
+; [HKEY_CURRENT_USER\Control Panel\Mouse]
+; "MouseSpeed"="0"
+; "MouseThreshold1"="0"
+; "MouseThreshold2"="0"

@@ -1,0 +1,80 @@
+; win-setup / CustomAppsList.txt
+; One Appx package family name per line.
+; Lines starting with ';' are comments and ignored.
+; Win11Debloat will remove every package matching these names.
+;
+; Generate or verify by listing what's installed:
+;   Get-AppxPackage -AllUsers | Select-Object Name, PackageFamilyName | Out-GridView
+;
+; Win11Debloat looks for this at: %TEMP%\Win11Debloat\Config\CustomAppsList.txt
+; bootstrap.ps1 copies this file into that location automatically.
+
+; ===== Bing apps =====
+Microsoft.BingNews
+Microsoft.BingWeather
+Microsoft.BingSearch
+Microsoft.BingFinance
+
+; ===== Cortana / AI =====
+Microsoft.549981C3F5F10
+Microsoft.Windows.AIHub
+Microsoft.Windows.DevHome
+
+; ===== Xbox / gaming =====
+Microsoft.GamingApp
+Microsoft.Xbox.TCUI
+Microsoft.XboxApp
+Microsoft.XboxGameOverlay
+Microsoft.XboxGamingOverlay
+Microsoft.XboxIdentityProvider
+Microsoft.XboxSpeechToTextOverlay
+
+; ===== Communication / social =====
+MicrosoftTeams
+MSTeams
+Microsoft.Teams
+Microsoft.SkypeApp
+Microsoft.YourPhone
+MicrosoftWindows.CrossDevice
+
+; ===== Microsoft 365 hub apps =====
+Microsoft.MicrosoftOfficeHub
+Microsoft.Office.OneNote
+Microsoft.MicrosoftStickyNotes
+
+; ===== Media =====
+Microsoft.ZuneMusic
+Microsoft.ZuneVideo
+Microsoft.WindowsSoundRecorder
+Clipchamp.Clipchamp
+Microsoft.WindowsMaps
+SpotifyAB.SpotifyMusic
+
+; ===== Mail / Calendar (new Outlook + classic Mail) =====
+microsoft.windowscommunicationsapps
+Microsoft.OutlookForWindows
+Microsoft.People
+
+; ===== Utilities you almost certainly don't need =====
+Microsoft.GetHelp
+Microsoft.Getstarted
+Microsoft.WindowsFeedbackHub
+Microsoft.WindowsAlarms
+Microsoft.MixedReality.Portal
+Microsoft.PowerAutomateDesktop
+Microsoft.WindowsCamera
+Microsoft.MicrosoftJournal
+Microsoft.Whiteboard
+MicrosoftCorporationII.QuickAssist
+MicrosoftCorporationII.MicrosoftFamily
+
+; ===== ASUS / OEM bloat (verify exact names with Get-AppxPackage) =====
+; AsusLumawiz                ; (ASUS lighting — keep if you use the keyboard backlight panel)
+; AsusXboost                 ; (some perf overlay)
+; B9ECE6F5.ROGGameLauncher
+; AsusOptimization
+; AsusInstantOn
+; AsusSmartGesture
+
+; ===== McAfee / OEM AV trial — only if your OEM image ships it =====
+; 5A894077.McAfeeSecurity
