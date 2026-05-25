@@ -90,15 +90,15 @@ if (-not $ScriptDir) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.P
 if (-not $ScriptDir) { $ScriptDir = Get-Location }
 
 # =============================================================================
-# Load logging library
+# Load WinSetup module
 # =============================================================================
 
-$libPath = Join-Path $ScriptDir 'Logging.ps1'
-if (-not (Test-Path $libPath)) {
-    Write-Error "Cannot find $libPath. Logging.ps1 must sit alongside this script."
+$modulePath = Join-Path $ScriptDir 'lib\WinSetup'
+if (-not (Test-Path $modulePath)) {
+    Write-Error "Cannot find WinSetup module at $modulePath. The 'lib\WinSetup' folder must sit alongside this script."
     exit 1
 }
-. $libPath
+Import-Module $modulePath -Force
 
 # =============================================================================
 # Resolve preset switches -> $Steps list
