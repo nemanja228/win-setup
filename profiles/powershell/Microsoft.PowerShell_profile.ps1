@@ -14,7 +14,6 @@ using namespace System.Management.Automation.Language
 #   - PSReadLine keybindings (history search, smart edit, prediction)
 #   - z (directory jumper)
 #   - Add-Path helper
-#   - Terminal transparency trigger (sends Ctrl+Shift+] to active AHK script)
 # =============================================================================
 
 # ---- Module loads -----------------------------------------------------------
@@ -368,9 +367,3 @@ function Add-Path($Path) {
     [Environment]::SetEnvironmentVariable('Path', "$current$([IO.Path]::PathSeparator)$Path", 'Machine')
 }
 
-# ---- Terminal transparency trigger ------------------------------------------
-# WtTransparent.ahk binds Ctrl+Shift+] to toggle window transparency. Sending
-# the chord on shell start opens every new PowerShell window already transparent.
-# Drop this line if it interferes with another app's Ctrl+Shift+] binding.
-$wshell = New-Object -ComObject wscript.shell
-$wshell.SendKeys("^+]")

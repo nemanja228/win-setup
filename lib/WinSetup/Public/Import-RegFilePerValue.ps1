@@ -32,6 +32,16 @@
         [string]$DetailLog
     )
 
+    # reg.exe writes informational messages (including "The operation completed
+    # successfully") to stderr. Our `& reg.exe ... 2>&1` capture turns those into
+    # ErrorRecord objects in the pipeline; under the module's default $EAP='Stop'
+    # they propagate as terminating errors on the first call. Force EAP=Continue
+    # for the duration of this function so the per-value loop runs to completion;
+    # we still detect real failures via $LASTEXITCODE.
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+
     if (-not (Test-Path $Path)) {
         throw "Reg file not found: $Path"
     }
@@ -141,5 +151,9 @@ Start: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         OkCount   = $okCount
         FailCount = $failed.Count
         Failed    = $failed
+    }
+
+    } finally {
+        $ErrorActionPreference = $prevEAP
     }
 }

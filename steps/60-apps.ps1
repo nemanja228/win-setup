@@ -36,9 +36,18 @@ Invoke-Step -Name "winget: import tiered apps lists" -Tags @('apps') -ContinueOn
             continue
         }
         Write-Log -Level DEBUG -Message "  Importing tier '$tier': $apps  (output -> $WingetLog)"
-        & winget import --import-file $apps `
+        $output = & winget import --import-file $apps `
             --accept-package-agreements --accept-source-agreements `
-            --ignore-unavailable 2>&1 | Tee-Object -FilePath $WingetLog -Append
+            --ignore-unavailable 2>&1
+        $output | Tee-Object -FilePath $WingetLog -Append | Out-Null
+
+        # winget exits 0 even when it rejects the JSON for schema validation —
+        # the step would otherwise report [OK] with zero packages installed.
+        # Detect the failure text and surface it as a real error.
+        $outputText = ($output | ForEach-Object { $_.ToString() }) -join "`n"
+        if ($outputText -match 'Schema validation failed|JSON file is not valid') {
+            throw "winget rejected $apps as invalid JSON/schema. See $WingetLog for details."
+        }
     }
     $script:AppsImportRan = $true
 }
