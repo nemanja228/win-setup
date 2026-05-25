@@ -1,4 +1,4 @@
-function Get-StepSummary {
+﻿function Get-StepSummary {
 <#
 .SYNOPSIS
     Return the per-step summary collected by Invoke-Step during this session.

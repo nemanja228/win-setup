@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # 60 — Apps: winget source update + tiered import + post-apps tweaks re-import
 #
 # $Tiers is bootstrap-scope (e.g. 'common','professional','personal'). Bootstrap

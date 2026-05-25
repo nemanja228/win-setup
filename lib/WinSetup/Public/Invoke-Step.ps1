@@ -1,4 +1,4 @@
-function Invoke-Step {
+﻿function Invoke-Step {
 <#
 .SYNOPSIS
     Wraps a scriptblock with logging, timing, dry-run skip, and tag-based filtering.

@@ -1,4 +1,4 @@
-function Import-RegFilePerValue {
+﻿function Import-RegFilePerValue {
 <#
 .SYNOPSIS
     Import a .reg file value-by-value, recording per-value OK/FAIL with reg.exe output.

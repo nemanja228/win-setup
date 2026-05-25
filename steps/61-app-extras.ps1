@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # 61 — App extras: scan post-install/*.ps1 and run hooks for installed apps
 #
 # Convention: post-install/<winget-package-id>.ps1
