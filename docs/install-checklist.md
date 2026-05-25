@@ -130,6 +130,13 @@ Clone or copy this repo somewhere (e.g. `$env:USERPROFILE\code\windows-system-co
 .\bootstrap.ps1             # full run
 ```
 
+**Interactive prompts to expect during the apps step:**
+
+- **Docker Desktop**: `--silent` doesn't suppress Docker's backend/scope choice prompts (they're MSI-property-gated, not CLI-flag-gated, and winget's `import` schema 2.0 doesn't support per-package `--custom`). When the Docker installer window appears:
+  - Backend: **WSL2** (lighter, modern, shares your already-configured WSL2 kernel; Hyper-V backend is only for native Windows containers)
+  - Scope: **Per-user** (you're the sole account; updates won't need elevation)
+- **Visual Studio 2022 / JetBrains Toolbox / similar large vendor installers**: occasionally surface a license-acceptance window despite `--accept-package-agreements`. Click through.
+
 What it covers (each step idempotent, tag-filtered, logged):
 
 - System restore point
@@ -198,18 +205,12 @@ If you skip the apps step initially and want to re-run just the post-install hoo
 
 Some apps either aren't on winget, are version-pinned to a release winget doesn't carry, or need vendor-specific account setup that scripts can't automate. This section is the canonical list.
 
-**Archived vendor installers** that have been pulled from the vendor's official downloads (but you've kept a working copy) live at:
-
-```
-D:\data\installers\
-```
-
-`D:\data\` is Insync-synced to Google Drive, so the binaries survive a laptop wipe. Keep filenames descriptive (`<Vendor>-<Product>-<version>.exe`) so future-you remembers what each one is.
+**Archived vendor installers** that have been pulled from the vendor's official downloads (but you've kept a working copy) live under `D:\data\3_library\software\windows\`. `D:\data\` is Insync-synced to Google Drive, so the binaries survive a laptop wipe. Keep filenames descriptive (`<Vendor>-<Product>-<version>.exe`) so future-you remembers what each one is.
 
 ### Apps not on winget (or version-pinned)
 
 - [ ] **Microsoft Office** — download via Office Deployment Tool from <https://www.microsoft.com/en-us/download/details.aspx?id=49117> with custom XML config (generate at <https://config.office.com>). Install Word / Excel / PowerPoint / Outlook, skip OneNote / Teams / Publisher / Skype. Activate by signing into Word > File > Account.
-- [ ] **CoolerMaster MasterPlus+** — for MK750 keyboard customization. **Vendor pulled the official download.** Use the archived installer at `D:\data\installers\CoolerMaster-MasterPlus-<version>.exe`. Right-click → Run as administrator.
+- [ ] **CoolerMaster Portal** — for MK750 keyboard customization. **Vendor pulled the official MasterPlus+ download** and Portal isn't on their current downloads page either. Use the archived installer at `D:\data\3_library\software\windows\CoolerMaster-Portal-1.01.exe`. Right-click → Run as administrator.
 - [ ] **Native Instruments Guitar Rig** — install via **Native Access** from <https://www.native-instruments.com/en/specials/native-access-2/>, then use Native Access to install Guitar Rig. (If Native Access itself ever gets pulled, archive the installer to `D:\data\installers\` too.)
 - [ ] **Arturia keyboard software** — install via **Arturia Software Center** from <https://www.arturia.com/support/downloads&manuals>, then use ASC to install your specific keyboard's product page.
 

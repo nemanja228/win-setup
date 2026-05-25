@@ -285,6 +285,6 @@ There's an explicit "do not remove" list in `docs/debloat.md` (e.g. `Microsoft.N
 - Vendor app configuration (MyASUS Battery Care, Fan Mode, etc. — UI-only, no PowerShell API; see `docs/machines/`)
 - Audient EVO driver install (download manually from audient.com)
 - Office activation (sign in via Word > Account; install via Office Deployment Tool — see `docs/install-checklist.md` § 15)
-- Anything in the manual-install bucket: CoolerMaster MasterPlus+, Guitar Pro 7.5 (winget only has v8), Native Instruments Guitar Rig (via Native Access), Arturia keyboard software, Serbian eUprava tools (Čelik / TrustEdgeID / ePorezi)
+- Anything in the manual-install bucket: CoolerMaster Portal (archived locally — vendor pulled it), Native Instruments Guitar Rig (via Native Access), Arturia keyboard software, Serbian eUprava tools (Čelik / TrustEdgeID / ePorezi)
 
 All documented in detail in `docs/install-checklist.md` § 15.
