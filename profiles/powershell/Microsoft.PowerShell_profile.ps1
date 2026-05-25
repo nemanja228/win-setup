@@ -319,19 +319,34 @@ Set-PSReadLineKeyHandler -Key Ctrl+V `
     }
 }
 
-# RightArrow: when at end of line, accept next predicted word (vs whole suggestion via ForwardChar)
-Set-PSReadLineKeyHandler -Key RightArrow `
-                         -BriefDescription ForwardCharAndAcceptNextSuggestionWord `
-                         -LongDescription "At end of line, accept next predicted word; otherwise move cursor right" `
-                         -ScriptBlock {
-    param($key, $arg)
-    $line = $null
-    $cursor = $null
-    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
-    if ($cursor -lt $line.Length) {
-        [Microsoft.PowerShell.PSConsoleReadLine]::ForwardChar($key, $arg)
-    } else {
-        [Microsoft.PowerShell.PSConsoleReadLine]::AcceptNextSuggestionWord($key, $arg)
+# PSReadLine 2.2+ feature detection. PS 7 ships ≥2.2 by default; Windows
+# PowerShell 5.1 ships 2.0 (no predictions, no AcceptNextSuggestionWord).
+# If you want full features in 5.1 too, run once:
+#   Install-Module PSReadLine -Force -SkipPublisherCheck -Scope CurrentUser
+$script:__psrlSupportsPrediction = $false
+try {
+    $__psrlVer = (Get-Module PSReadLine).Version
+    if ($__psrlVer -and $__psrlVer -ge [version]'2.2.0') {
+        $script:__psrlSupportsPrediction = $true
+    }
+} catch { }
+
+# RightArrow: when at end of line, accept next predicted word (vs whole suggestion via ForwardChar).
+# Only registered when PSReadLine supports AcceptNextSuggestionWord — otherwise default RightArrow behavior is fine.
+if ($script:__psrlSupportsPrediction) {
+    Set-PSReadLineKeyHandler -Key RightArrow `
+                             -BriefDescription ForwardCharAndAcceptNextSuggestionWord `
+                             -LongDescription "At end of line, accept next predicted word; otherwise move cursor right" `
+                             -ScriptBlock {
+        param($key, $arg)
+        $line = $null
+        $cursor = $null
+        [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+        if ($cursor -lt $line.Length) {
+            [Microsoft.PowerShell.PSConsoleReadLine]::ForwardChar($key, $arg)
+        } else {
+            [Microsoft.PowerShell.PSConsoleReadLine]::AcceptNextSuggestionWord($key, $arg)
+        }
     }
 }
 
@@ -351,9 +366,12 @@ Set-PSReadLineOption -CommandValidationHandler {
     }
 }
 
-# PSReadLine prediction settings.
-Set-PSReadLineOption -PredictionSource History
-Set-PSReadLineOption -PredictionViewStyle ListView
+# PSReadLine prediction settings — only on PSReadLine 2.2+ (PS 7 native; PS 5.1
+# needs `Install-Module PSReadLine -Force -SkipPublisherCheck`).
+if ($script:__psrlSupportsPrediction) {
+    Set-PSReadLineOption -PredictionSource History
+    Set-PSReadLineOption -PredictionViewStyle ListView
+}
 Set-PSReadLineOption -EditMode Windows
 
 # ---- z (directory jumper) ---------------------------------------------------
