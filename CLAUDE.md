@@ -211,7 +211,7 @@ Three winget package lists under `resources/winget/`:
 
 - **`apps.common.json`** (22 packages) — everyday tools any of the user's machines should have: PowerShell, Git, gh, OhMyPosh, VS Code, PowerToys, .NET 10 SDK, Docker Desktop, Firefox, Chrome, Notepad++, Obsidian, Everything, Insync, 7zip, Bitwarden CLI, PDF24, AutoHotkey v2, VLC, WizTree, Logitech Options+, UniGetUI.
 - **`apps.professional.json`** (7 packages) — work tooling: JetBrains Toolbox, SSMS, .NET 8 SDK (LTS), fnm, pyenv-win, WinMerge, WinSCP.
-- **`apps.personal.json`** (3 packages) — taste-driven: LatencyMon, REAPER, GeForce Now.
+- **`apps.personal.json`** (4 packages) — taste-driven: LatencyMon, REAPER, TuxGuitar, GeForce Now.
 
 Selected via `-Tiers`. Default: all three. Tier-per-file (not one JSON with tags) because `winget import` consumes whole files.
 

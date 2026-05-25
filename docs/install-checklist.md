@@ -153,7 +153,7 @@ What it covers (each step idempotent, tag-filtered, logged):
 |---|---|
 | `common` | PowerShell 7, Git, gh, OhMyPosh, VS Code, PowerToys, .NET 10 SDK, Docker Desktop, Firefox, Chrome, Notepad++, Obsidian, Everything, Insync, 7zip, Bitwarden CLI, PDF24, AutoHotkey, VLC, WizTree, Logitech Options+, UniGetUI |
 | `professional` | JetBrains Toolbox, SSMS, .NET 8 SDK (LTS), fnm, pyenv-win, WinMerge, WinSCP |
-| `personal` | LatencyMon, REAPER, GeForce Now |
+| `personal` | LatencyMon, REAPER, TuxGuitar, GeForce Now |
 
 ## 11. Windows Terminal, PowerShell, Oh-My-Posh
 
@@ -202,7 +202,6 @@ Some apps either aren't on winget, are version-pinned to a release winget doesn'
 
 - [ ] **Microsoft Office** — download via Office Deployment Tool from <https://www.microsoft.com/en-us/download/details.aspx?id=49117> with custom XML config (generate at <https://config.office.com>). Install Word / Excel / PowerPoint / Outlook, skip OneNote / Teams / Publisher / Skype. Activate by signing into Word > File > Account.
 - [ ] **CoolerMaster MasterPlus+** — for MK750 keyboard customization. Download from <https://www.coolermaster.com/en-global/software/masterplus/>.
-- [ ] **Guitar Pro 7.5** — winget only carries v8; if you specifically want 7.5, download from <https://www.guitar-pro.com/> (account required).
 - [ ] **Native Instruments Guitar Rig** — install via **Native Access** from <https://www.native-instruments.com/en/specials/native-access-2/>, then use Native Access to install Guitar Rig.
 - [ ] **Arturia keyboard software** — install via **Arturia Software Center** from <https://www.arturia.com/support/downloads&manuals>, then use ASC to install your specific keyboard's product page.
 

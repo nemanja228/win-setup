@@ -6,6 +6,7 @@
       "Packages": [
         { "PackageIdentifier": "Resplendence.LatencyMon" },
         { "PackageIdentifier": "Cockos.REAPER" },
+        { "PackageIdentifier": "TuxGuitar.TuxGuitar" },
         { "PackageIdentifier": "NVIDIA.GeForceNow" }
       ],
       "SourceDetails": {
