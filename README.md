@@ -6,6 +6,10 @@ Designed for .NET / WSL dev work, music production with an external audio interf
 
 ---
 
+## Review before running
+
+These configs are **opinionated**: privacy aggressive (OOSU10 + tweaks.reg flatten telemetry/Copilot/Widgets/web search), debloat removes a curated Appx list, regional pack is Serbia/CET with en-US UI, power plan is High Performance tuned for an external audio interface. None of this is wrong, but you should read [`docs/debloat.md`](docs/debloat.md) and `resources/shutup/ooshutup10.cfg` before running on a machine you care about — and **always run `-Verify` first** (dry run) to see every step before anything changes. When forking, see [`Forking this repo`](#forking-this-repo) at the bottom for the per-fork knobs.
+
 ## Quick start
 
 ```powershell
@@ -151,3 +155,23 @@ See [`docs/troubleshooting.md`](docs/troubleshooting.md) for common failures.
 - **[`docs/troubleshooting.md`](docs/troubleshooting.md)** — logs, common failures
 - **[`docs/machines/`](docs/machines/)** — machine-specific supplements
 - **[`post-install/README.md`](post-install/README.md)** — per-app post-install hook convention
+
+---
+
+## Forking this repo
+
+The repo is generic-by-default but ships with the maintainer's opinions baked in. Things you'll typically want to review/edit before running on your own machine:
+
+- **`resources/winget/apps.personal.json`** — taste-driven (REAPER, TuxGuitar, LatencyMon, GeForce Now). Probably wrong for you. Replace.
+- **`resources/winget/apps.work.json`** — opinionated: JetBrains, SSMS, .NET 8 LTS, fnm, pyenv, WinMerge, WinSCP. Some of these are very work-specific.
+- **`resources/winget/apps.dev.json` / `apps.common.json`** — narrower personalization but still review.
+- **`resources/shutup/ooshutup10.cfg`** — opinionated privacy choices. Re-export from the OOSU10 GUI to your own taste (File → Export). Don't hand-edit.
+- **`resources/debloat/CustomAppsList.txt`** — Appx removal list. Run `Get-AppxPackage -AllUsers | Out-GridView` first to confirm names; OEM packages drift across vendors.
+- **`resources/registry/tweaks.reg`** — the "Regional pack" block sets Serbia/CET/en-US locale + dd.MM.yyyy + 24-hour + Monday-first + Serbian Latin keyboard. Comment out or replace if you're not in CET.
+- **`steps/30-region.ps1`** — sets time zone to `Central Europe Standard Time`. Hard-coded; change to your time zone string.
+- **`steps/40-power.ps1`** — High Performance plan tuned for a USB audio interface (USB selective suspend off, LSPM off on AC). Not relevant if you don't run a DAW; the High Performance plan itself is opinionated.
+- **`docs/machines/`** — drop in `docs/machines/<vendor>-<model>.md` for your hardware. The ASUS Zenbook S16 doc is the maintainer's; ignore or delete on fork.
+- **`lib/WinSetup/WinSetup.psd1`** — `Author`, `Copyright`, `ProjectUri` are the maintainer's attribution. Update these on fork.
+- **`LICENSE`** — MIT, copyright the maintainer. Keep the MIT or swap to your preferred license; either way update the copyright line.
+
+Anything else (autounattend template, WSL config layout, the bootstrap dispatcher, the `WinSetup` module helpers, the per-value `.reg` importer, the post-install hook hash-sentinel mechanic) is the repo's value proposition — leave alone unless you're refactoring intentionally.
