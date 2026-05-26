@@ -68,13 +68,19 @@ Microsoft.Whiteboard
 MicrosoftCorporationII.QuickAssist
 MicrosoftCorporationII.MicrosoftFamily
 
-; ===== ASUS / OEM bloat (verify exact names with Get-AppxPackage) =====
-; AsusLumawiz                ; (ASUS lighting — keep if you use the keyboard backlight panel)
-; AsusXboost                 ; (some perf overlay)
-; B9ECE6F5.ROGGameLauncher
-; AsusOptimization
-; AsusInstantOn
-; AsusSmartGesture
+; ===== Games / hub apps =====
+Microsoft.MicrosoftSolitaireCollection
+Microsoft.Todos
+
+; ===== Widgets / News & Interests =====
+MicrosoftWindows.Client.WebExperience
+Microsoft.WidgetsPlatformRuntime
+
+; ===== Dolby Atmos upsell (KEEP DolbyDigitalPlusDecoderOEM — that's the codec) =====
+DolbyLaboratories.DolbyAccess
+
+; ===== Education / lockdown browser =====
+Microsoft.Windows.SecureAssessmentBrowser
 
 ; ===== McAfee / OEM AV trial — only if your OEM image ships it =====
 ; 5A894077.McAfeeSecurity

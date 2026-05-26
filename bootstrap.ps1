@@ -3,54 +3,84 @@
 
 <#
 .SYNOPSIS
-    Post-install automation for Windows 11 on ASUS Zenbook S16 UM5606WA.
-    Idempotent. Safe to run multiple times (e.g. after major Windows feature updates).
+    Post-install automation for Windows 11. Idempotent. Safe to run repeatedly.
 
 .DESCRIPTION
-    Pipeline:
-      1. Pre-flight checks (admin, OS build, network)
-      2. System restore point
-      3. Win11Debloat (Raphire) — apps + telemetry + UI tweaks
-      4. O&O ShutUp10++ with saved config
-      5. Registry tweaks (tweaks.reg)
-      6. winget bulk install (apps.json)
-      7. Power plan (restore High Performance, disable USB selective suspend)
-      8. Defender exclusions for dev/audio folders
-      9. Optional Windows features (Hyper-V, WSL, VirtualMachinePlatform, Sandbox)
-     10. WSL2 + .wslconfig
-     11. Manual TODO checklist on Desktop
+    Each step is tagged. Pass -Steps to run only matching steps, or use one of
+    the preset switches. With no flags, all steps run (the original behaviour).
 
-    Every step logs to console (colour-coded) AND to a timestamped file under
-    %USERPROFILE%\win-setup-logs\bootstrap-<timestamp>.log
+    Tags in use:
+        core      — settings most users want every run (debloat, power, defender)
+        debloat   — Win11Debloat, OOSU10, tweaks.reg
+        privacy   — OOSU10, tweaks.reg (subset of debloat with privacy focus)
+        config    — tweaks.reg, .wslconfig (writes config files)
+        apps      — winget source update + import
+        power     — power plan + USB selective suspend
+        defender  — Defender exclusions
+        features  — Hyper-V, WSL, VMP, Sandbox feature enables
+        wsl       — WSL update, install, .wslconfig
+        restore   — system restore point
+        checklist — generate TODO file on Desktop
 
-.PARAMETER SkipApps
-    Don't run winget import.
+    Pre-flight checks (admin, build version, network, execution policy) have NO
+    tags and always run.
 
-.PARAMETER SkipWSL
-    Don't install WSL or write .wslconfig.
+.PARAMETER Steps
+    Tag list. Steps with matching tags run; others are filtered out.
+    Example: -Steps debloat,apps  runs Win11Debloat, OOSU10, tweaks.reg, winget.
+
+.PARAMETER PostUpdate
+    Preset for "after a Windows feature update flipped my settings back."
+    Equivalent to: -Steps debloat,privacy,features,power,defender
+
+.PARAMETER AppsOnly
+    Preset for "just install / update my apps." Equivalent to: -Steps apps
+
+.PARAMETER Verify
+    Preset for "show me what would change without changing anything."
+    Equivalent to: -DryRun
 
 .PARAMETER DryRun
-    Log what would happen without making changes.
+    Skip destructive actions but log what they would do.
+
+.PARAMETER ForceWslConfig
+    Overwrite an existing .wslconfig (with backup). Default behaviour is to
+    leave an existing .wslconfig alone — change the script's here-string if you
+    want a different canonical config and re-run with this switch.
 
 .EXAMPLE
     .\bootstrap.ps1
+    # Run everything (initial install)
 
 .EXAMPLE
-    .\bootstrap.ps1 -DryRun
+    .\bootstrap.ps1 -PostUpdate
+    # After Windows feature update: re-flatten settings, re-verify features
 
 .EXAMPLE
-    .\bootstrap.ps1 -SkipApps -SkipWSL
+    .\bootstrap.ps1 -AppsOnly
+    # Just sync apps to apps.json
+
+.EXAMPLE
+    .\bootstrap.ps1 -Steps debloat
+    # Re-apply debloat tools only
+
+.EXAMPLE
+    .\bootstrap.ps1 -Verify
+    # Dry-run: show what would happen without touching the system
 #>
 
 [CmdletBinding()]
 param(
-    [switch]$SkipApps,
-    [switch]$SkipWSL,
-    [switch]$DryRun
+    [string[]]$Steps,
+    [switch]$PostUpdate,
+    [switch]$AppsOnly,
+    [switch]$Verify,
+    [switch]$DryRun,
+    [switch]$ForceWslConfig
 )
 
 # =============================================================================
-# Resolve script directory (works whether run via path or dot-sourced)
+# Resolve script directory
 # =============================================================================
 
 $ScriptDir = $PSScriptRoot
@@ -58,141 +88,40 @@ if (-not $ScriptDir) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.P
 if (-not $ScriptDir) { $ScriptDir = Get-Location }
 
 # =============================================================================
-# Logging infrastructure
+# Load logging library
 # =============================================================================
 
-$LogDir = Join-Path $env:USERPROFILE 'win-setup-logs'
-if (-not (Test-Path $LogDir)) {
-    New-Item -Path $LogDir -ItemType Directory -Force | Out-Null
+$libPath = Join-Path $ScriptDir 'lib\Logging.ps1'
+if (-not (Test-Path $libPath)) {
+    Write-Error "Cannot find $libPath. Make sure the 'lib' folder is alongside this script."
+    exit 1
+}
+. $libPath
+
+# =============================================================================
+# Resolve preset switches -> $Steps list
+# =============================================================================
+
+# Presets are mutually exclusive with explicit -Steps; explicit wins.
+if (-not $Steps -or $Steps.Count -eq 0) {
+    if     ($PostUpdate) { $Steps = @('debloat','privacy','features','power','defender') }
+    elseif ($AppsOnly)   { $Steps = @('apps') }
 }
 
-$Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$Script:LogFile     = Join-Path $LogDir "bootstrap-$Stamp.log"
-$Script:WingetLog   = Join-Path $LogDir "winget-$Stamp.log"
-$Script:OosuLog     = Join-Path $LogDir "oosu-$Stamp.log"
-$Script:DebloatLog  = Join-Path $LogDir "win11debloat-$Stamp.log"
-$Script:Summary     = New-Object System.Collections.Generic.List[object]
+# -Verify is just -DryRun with a friendlier flag
+if ($Verify) { $DryRun = $true }
 
-function Write-Log {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true, Position=0)][AllowEmptyString()][string]$Message,
-        [ValidateSet('INFO','WARN','ERROR','SUCCESS','STEP','DEBUG','TRACE')]
-        [string]$Level = 'INFO'
-    )
-    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $line = "[$ts] [$($Level.PadRight(7))] $Message"
-    $color = switch ($Level) {
-        'INFO'    { 'Gray' }
-        'WARN'    { 'Yellow' }
-        'ERROR'   { 'Red' }
-        'SUCCESS' { 'Green' }
-        'STEP'    { 'Cyan' }
-        'DEBUG'   { 'DarkGray' }
-        'TRACE'   { 'DarkGray' }
-        default   { 'White' }
-    }
-    Write-Host $line -ForegroundColor $color
-    try {
-        Add-Content -Path $Script:LogFile -Value $line -Encoding UTF8 -ErrorAction Stop
-    } catch {
-        Write-Host "  [log write failed: $($_.Exception.Message)]" -ForegroundColor Red
-    }
-}
+# =============================================================================
+# Initialize logging
+# =============================================================================
 
-function Invoke-Step {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)][string]$Name,
-        [Parameter(Mandatory=$true)][scriptblock]$Action,
-        [switch]$ContinueOnError,
-        [switch]$SkipOnDryRun
-    )
-    Write-Log -Level STEP -Message ""
-    Write-Log -Level STEP -Message "==> $Name"
-    $start = Get-Date
-    $result = [PSCustomObject]@{
-        Name        = $Name
-        Success     = $false
-        DurationSec = 0.0
-        Error       = $null
-        Skipped     = $false
-    }
+$init = Initialize-Logging
+Set-LoggingFilter -Steps $Steps -DryRun:$DryRun.IsPresent
 
-    try {
-        if ($DryRun -and $SkipOnDryRun) {
-            Write-Log -Level WARN -Message "  [DRY-RUN] skipping execution"
-            $result.Skipped = $true
-            $result.Success = $true
-        } else {
-            # Capture all output streams and forward to log
-            & $Action 2>&1 | ForEach-Object {
-                if ($null -eq $_) { return }
-                $text = $_.ToString().TrimEnd()
-                if ([string]::IsNullOrWhiteSpace($text)) { return }
-                if ($_ -is [System.Management.Automation.ErrorRecord]) {
-                    Write-Log -Level WARN -Message "  ! $text"
-                }
-                elseif ($_ -is [System.Management.Automation.WarningRecord]) {
-                    Write-Log -Level WARN -Message "  ? $text"
-                }
-                else {
-                    Write-Log -Level TRACE -Message "    $text"
-                }
-            }
-            $result.Success = $true
-        }
-    } catch {
-        $result.Error = $_.Exception.Message
-        Write-Log -Level ERROR -Message "  Exception: $($_.Exception.Message)"
-        if ($_.ScriptStackTrace) {
-            foreach ($l in ($_.ScriptStackTrace -split "`n")) {
-                Write-Log -Level ERROR -Message "    $l"
-            }
-        }
-        if (-not $ContinueOnError) {
-            $result.DurationSec = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
-            $Script:Summary.Add($result)
-            Show-Summary
-            throw
-        }
-    }
-
-    $result.DurationSec = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
-    if ($result.Skipped) {
-        Write-Log -Level WARN -Message "  SKIPPED ($($result.DurationSec)s)"
-    } elseif ($result.Success) {
-        Write-Log -Level SUCCESS -Message "  OK ($($result.DurationSec)s)"
-    } else {
-        Write-Log -Level ERROR -Message "  FAILED ($($result.DurationSec)s)"
-    }
-    $Script:Summary.Add($result)
-}
-
-function Show-Summary {
-    Write-Log -Level STEP -Message ""
-    Write-Log -Level STEP -Message "=================== SUMMARY ==================="
-    $ok      = ($Script:Summary | Where-Object { $_.Success -and -not $_.Skipped }).Count
-    $skipped = ($Script:Summary | Where-Object { $_.Skipped }).Count
-    $fail    = ($Script:Summary | Where-Object { -not $_.Success }).Count
-    Write-Log -Level SUCCESS -Message "Succeeded: $ok"
-    Write-Log -Level WARN    -Message "Skipped:   $skipped"
-    Write-Log -Level $(if ($fail) { 'ERROR' } else { 'INFO' }) -Message "Failed:    $fail"
-    Write-Log -Level INFO    -Message ""
-    foreach ($s in $Script:Summary) {
-        $marker  = if ($s.Skipped) { '~' } elseif ($s.Success) { 'OK' } else { 'X ' }
-        $lvl     = if ($s.Skipped) { 'WARN' } elseif ($s.Success) { 'INFO' } else { 'ERROR' }
-        $extra   = if ($s.Error) { "  -- $($s.Error)" } else { '' }
-        $line    = ("  [{0,-2}] {1}  ({2}s){3}" -f $marker, $s.Name, $s.DurationSec, $extra)
-        Write-Log -Level $lvl -Message $line
-    }
-    Write-Log -Level STEP -Message "==============================================="
-    Write-Log -Level INFO -Message ""
-    Write-Log -Level INFO -Message "Full log:        $Script:LogFile"
-    Write-Log -Level INFO -Message "Winget log:      $Script:WingetLog"
-    Write-Log -Level INFO -Message "OOSU10 log:      $Script:OosuLog"
-    Write-Log -Level INFO -Message "Win11Debloat log: $Script:DebloatLog"
-}
+# Separate per-tool log files
+$Script:WingetLog   = Join-Path $init.LogDir "winget-$($init.Stamp).log"
+$Script:OosuLog     = Join-Path $init.LogDir "oosu-$($init.Stamp).log"
+$Script:DebloatLog  = Join-Path $init.LogDir "win11debloat-$($init.Stamp).log"
 
 # =============================================================================
 # Header
@@ -205,14 +134,21 @@ Write-Log -Level INFO -Message "Host:    $env:COMPUTERNAME"
 Write-Log -Level INFO -Message "User:    $env:USERNAME"
 Write-Log -Level INFO -Message "Start:   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')"
 Write-Log -Level INFO -Message "Script:  $ScriptDir"
-Write-Log -Level INFO -Message "Log:     $Script:LogFile"
-if ($DryRun)   { Write-Log -Level WARN -Message "MODE:    DRY-RUN — destructive steps will be skipped" }
-if ($SkipApps) { Write-Log -Level WARN -Message "FLAG:    -SkipApps set" }
-if ($SkipWSL)  { Write-Log -Level WARN -Message "FLAG:    -SkipWSL  set" }
+Write-Log -Level INFO -Message "Log:     $($init.LogFile)"
+
+if ($Steps -and $Steps.Count -gt 0) {
+    Write-Log -Level WARN -Message "Filter:  -Steps $($Steps -join ',')"
+} else {
+    Write-Log -Level INFO -Message "Filter:  (none — running every step)"
+}
+
+if ($DryRun)         { Write-Log -Level WARN -Message "MODE:    DRY-RUN — destructive steps will be skipped" }
+if ($ForceWslConfig) { Write-Log -Level WARN -Message "FLAG:    -ForceWslConfig — existing .wslconfig will be overwritten (with backup)" }
+
 Write-Log -Level STEP -Message "==============================================="
 
 # =============================================================================
-# Pre-flight
+# Pre-flight (no tags — always runs)
 # =============================================================================
 
 Invoke-Step -Name "Pre-flight: admin check" -Action {
@@ -228,7 +164,7 @@ Invoke-Step -Name "Pre-flight: Windows build" -ContinueOnError -Action {
     $caption = (Get-CimInstance Win32_OperatingSystem).Caption
     Write-Log -Level DEBUG -Message "  $caption (build $build)"
     if ($build -lt 26100) {
-        Write-Log -Level WARN -Message "  Build is older than 24H2 (26100). Some features (Recall toggle, AI Hub removal) won't apply."
+        Write-Log -Level WARN -Message "  Build older than 24H2 (26100). Some features won't apply."
     }
 }
 
@@ -252,21 +188,20 @@ Invoke-Step -Name "Pre-flight: set execution policy (process scope)" -Action {
 # Restore point
 # =============================================================================
 
-Invoke-Step -Name "Create system restore point" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "Create system restore point" -Tags @('restore') -ContinueOnError -SkipOnDryRun -Action {
     Enable-ComputerRestore -Drive "$env:SystemDrive\" -ErrorAction SilentlyContinue
-    # Override the 1440-minute throttle so repeated runs each get a point
     $srKey = 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\SystemRestore'
     if (-not (Test-Path $srKey)) { New-Item -Path $srKey -Force | Out-Null }
     New-ItemProperty -Path $srKey -Name 'SystemRestorePointCreationFrequency' -Value 0 -PropertyType DWord -Force | Out-Null
-    Checkpoint-Computer -Description "win-setup bootstrap $Stamp" -RestorePointType 'MODIFY_SETTINGS'
+    Checkpoint-Computer -Description "win-setup bootstrap $($init.Stamp)" -RestorePointType 'MODIFY_SETTINGS'
     Write-Log -Level DEBUG -Message "  Restore point created"
 }
 
 # =============================================================================
-# Debloat layer 1: Win11Debloat
+# Debloat: Win11Debloat
 # =============================================================================
 
-Invoke-Step -Name "Win11Debloat (apps + telemetry + UI tweaks)" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "Win11Debloat (apps + telemetry + UI tweaks)" -Tags @('core','debloat') -ContinueOnError -SkipOnDryRun -Action {
     $customList = Join-Path $ScriptDir 'CustomAppsList.txt'
     if (Test-Path $customList) {
         Write-Log -Level INFO -Message "  Found custom apps list: $customList"
@@ -276,22 +211,20 @@ Invoke-Step -Name "Win11Debloat (apps + telemetry + UI tweaks)" -ContinueOnError
         Write-Log -Level DEBUG -Message "  Copied to $cfgDir\CustomAppsList.txt"
     }
 
-    # Tee output to dedicated log
-    $transcript = $Script:DebloatLog
-    Start-Transcript -Path $transcript -Append -ErrorAction SilentlyContinue | Out-Null
+    Start-Transcript -Path $Script:DebloatLog -Append -ErrorAction SilentlyContinue | Out-Null
     try {
         & ([scriptblock]::Create((Invoke-RestMethod -Uri "https://debloat.raphi.re/"))) -RunDefaults -Silent
     } finally {
         Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
     }
-    Write-Log -Level DEBUG -Message "  Win11Debloat transcript: $transcript"
+    Write-Log -Level DEBUG -Message "  Win11Debloat transcript: $Script:DebloatLog"
 }
 
 # =============================================================================
-# Debloat layer 2: O&O ShutUp10++
+# Debloat: O&O ShutUp10++
 # =============================================================================
 
-Invoke-Step -Name "O&O ShutUp10++ (apply saved privacy config)" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "O&O ShutUp10++ (apply saved privacy config)" -Tags @('core','debloat','privacy') -ContinueOnError -SkipOnDryRun -Action {
     $cfgPath = Join-Path $ScriptDir 'ooshutup10.cfg'
     if (-not (Test-Path $cfgPath)) {
         Write-Log -Level WARN -Message "  ooshutup10.cfg not found in $ScriptDir — skipping."
@@ -303,8 +236,9 @@ Invoke-Step -Name "O&O ShutUp10++ (apply saved privacy config)" -ContinueOnError
     Invoke-WebRequest -Uri 'https://dl5.oo-software.com/files/ooshutup10/OOSU10.exe' -OutFile $oosuExe -UseBasicParsing
 
     Write-Log -Level DEBUG -Message "  Applying config: $cfgPath"
-    $args = @("`"$cfgPath`"", '/quiet')
-    $p = Start-Process -FilePath $oosuExe -ArgumentList $args -Wait -PassThru -RedirectStandardOutput $Script:OosuLog -RedirectStandardError "$Script:OosuLog.err" -NoNewWindow
+    $procArgs = @("`"$cfgPath`"", '/quiet')
+    $p = Start-Process -FilePath $oosuExe -ArgumentList $procArgs -Wait -PassThru `
+            -RedirectStandardOutput $Script:OosuLog -RedirectStandardError "$Script:OosuLog.err" -NoNewWindow
     if ($p.ExitCode -ne 0) {
         throw "OOSU10 exited with code $($p.ExitCode). See $Script:OosuLog"
     }
@@ -315,14 +249,15 @@ Invoke-Step -Name "O&O ShutUp10++ (apply saved privacy config)" -ContinueOnError
 # Registry tweaks
 # =============================================================================
 
-Invoke-Step -Name "Apply registry tweaks (tweaks.reg)" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "Apply registry tweaks (tweaks.reg)" -Tags @('core','debloat','privacy','config') -ContinueOnError -SkipOnDryRun -Action {
     $reg = Join-Path $ScriptDir 'tweaks.reg'
     if (-not (Test-Path $reg)) {
         Write-Log -Level WARN -Message "  tweaks.reg not found in $ScriptDir — skipping."
         return
     }
-    $regLog = Join-Path $LogDir "reg-import-$Stamp.log"
-    $p = Start-Process -FilePath reg.exe -ArgumentList @('import', "`"$reg`"") -Wait -PassThru -NoNewWindow -RedirectStandardOutput $regLog -RedirectStandardError "$regLog.err"
+    $regLog = Join-Path $init.LogDir "reg-import-$($init.Stamp).log"
+    $p = Start-Process -FilePath reg.exe -ArgumentList @('import', "`"$reg`"") -Wait -PassThru `
+            -NoNewWindow -RedirectStandardOutput $regLog -RedirectStandardError "$regLog.err"
     if ($p.ExitCode -ne 0) {
         throw "reg import exited with code $($p.ExitCode). See $regLog"
     }
@@ -333,31 +268,26 @@ Invoke-Step -Name "Apply registry tweaks (tweaks.reg)" -ContinueOnError -SkipOnD
 # Apps via winget
 # =============================================================================
 
-if (-not $SkipApps) {
-    Invoke-Step -Name "winget: update sources" -ContinueOnError -SkipOnDryRun -Action {
-        winget source update
-    }
+Invoke-Step -Name "winget: update sources" -Tags @('apps') -ContinueOnError -SkipOnDryRun -Action {
+    winget source update
+}
 
-    Invoke-Step -Name "winget: import apps.json" -ContinueOnError -SkipOnDryRun -Action {
-        $apps = Join-Path $ScriptDir 'apps.json'
-        if (-not (Test-Path $apps)) {
-            throw "apps.json not found in $ScriptDir"
-        }
-        Write-Log -Level DEBUG -Message "  Importing $apps  (output -> $Script:WingetLog)"
-        # We want both logging AND visibility — Tee handles both
-        & winget import --import-file $apps `
-            --accept-package-agreements --accept-source-agreements `
-            --ignore-unavailable 2>&1 | Tee-Object -FilePath $Script:WingetLog
+Invoke-Step -Name "winget: import apps.json" -Tags @('apps') -ContinueOnError -SkipOnDryRun -Action {
+    $apps = Join-Path $ScriptDir 'apps.json'
+    if (-not (Test-Path $apps)) {
+        throw "apps.json not found in $ScriptDir"
     }
-} else {
-    Write-Log -Level WARN -Message "-SkipApps flag set; winget import skipped"
+    Write-Log -Level DEBUG -Message "  Importing $apps  (output -> $Script:WingetLog)"
+    & winget import --import-file $apps `
+        --accept-package-agreements --accept-source-agreements `
+        --ignore-unavailable 2>&1 | Tee-Object -FilePath $Script:WingetLog
 }
 
 # =============================================================================
 # Power plan
 # =============================================================================
 
-Invoke-Step -Name "Power: restore High Performance plan" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "Power: restore High Performance plan" -Tags @('core','power') -ContinueOnError -SkipOnDryRun -Action {
     $list = powercfg /list
     if ($list -match 'High performance' -or $list -match 'Ultimate Performance') {
         Write-Log -Level DEBUG -Message "  High Performance plan already present"
@@ -367,8 +297,7 @@ Invoke-Step -Name "Power: restore High Performance plan" -ContinueOnError -SkipO
     }
 }
 
-Invoke-Step -Name "Power: disable USB selective suspend (AC+DC)" -ContinueOnError -SkipOnDryRun -Action {
-    # Subgroup 2a737441... = USB settings;  Setting 48e6b7a6... = USB selective suspend
+Invoke-Step -Name "Power: disable USB selective suspend (AC+DC)" -Tags @('core','power') -ContinueOnError -SkipOnDryRun -Action {
     powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0
     powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0
     powercfg /setactive SCHEME_CURRENT
@@ -379,7 +308,7 @@ Invoke-Step -Name "Power: disable USB selective suspend (AC+DC)" -ContinueOnErro
 # Defender exclusions
 # =============================================================================
 
-Invoke-Step -Name "Defender: add exclusions for dev/audio folders" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "Defender: add exclusions for dev/audio folders" -Tags @('core','defender') -ContinueOnError -SkipOnDryRun -Action {
     $paths = @(
         (Join-Path $env:USERPROFILE 'source'),
         (Join-Path $env:USERPROFILE 'projects'),
@@ -403,7 +332,7 @@ Invoke-Step -Name "Defender: add exclusions for dev/audio folders" -ContinueOnEr
 # Optional Windows features
 # =============================================================================
 
-Invoke-Step -Name "Windows features: Hyper-V, WSL, VMP, Sandbox" -ContinueOnError -SkipOnDryRun -Action {
+Invoke-Step -Name "Windows features: Hyper-V, WSL, VMP, Sandbox" -Tags @('features') -ContinueOnError -SkipOnDryRun -Action {
     $features = @(
         'Microsoft-Hyper-V-All',
         'VirtualMachinePlatform',
@@ -429,25 +358,23 @@ Invoke-Step -Name "Windows features: Hyper-V, WSL, VMP, Sandbox" -ContinueOnErro
 # WSL2
 # =============================================================================
 
-if (-not $SkipWSL) {
-    Invoke-Step -Name "WSL: update kernel" -ContinueOnError -SkipOnDryRun -Action {
-        wsl --update
-    }
+Invoke-Step -Name "WSL: update kernel" -Tags @('wsl') -ContinueOnError -SkipOnDryRun -Action {
+    wsl --update
+}
 
-    Invoke-Step -Name "WSL: install Ubuntu (if missing)" -ContinueOnError -SkipOnDryRun -Action {
-        $listed = (wsl --list --quiet 2>$null) -join "`n"
-        # WSL outputs UTF-16; normalise null bytes
-        $listed = $listed -replace "`0", ''
-        if ($listed -match 'Ubuntu') {
-            Write-Log -Level DEBUG -Message "  Ubuntu distro already registered"
-        } else {
-            wsl --install -d Ubuntu --no-launch
-            Write-Log -Level DEBUG -Message "  Ubuntu install initiated (will finish on first launch)"
-        }
+Invoke-Step -Name "WSL: install Ubuntu (if missing)" -Tags @('wsl') -ContinueOnError -SkipOnDryRun -Action {
+    $listed = (wsl --list --quiet 2>$null) -join "`n"
+    $listed = $listed -replace "`0", ''
+    if ($listed -match 'Ubuntu') {
+        Write-Log -Level DEBUG -Message "  Ubuntu distro already registered — not touching it"
+    } else {
+        wsl --install -d Ubuntu --no-launch
+        Write-Log -Level DEBUG -Message "  Ubuntu install initiated (finishes on first launch)"
     }
+}
 
-    Invoke-Step -Name "WSL: write .wslconfig" -SkipOnDryRun -Action {
-        $wslConfig = @'
+Invoke-Step -Name "WSL: write .wslconfig" -Tags @('wsl','config') -SkipOnDryRun -Action {
+    $wslConfig = @'
 # Managed by win-setup bootstrap.ps1
 [wsl2]
 memory=16GB
@@ -460,31 +387,37 @@ nestedVirtualization=true
 autoMemoryReclaim=gradual
 sparseVhd=true
 '@
-        $path = Join-Path $env:USERPROFILE '.wslconfig'
-        # Back up existing if different
-        if (Test-Path $path) {
-            $existing = Get-Content $path -Raw -ErrorAction SilentlyContinue
-            if ($existing -ne $wslConfig) {
-                $backup = "$path.bak-$Stamp"
-                Copy-Item $path $backup -Force
-                Write-Log -Level DEBUG -Message "  Existing .wslconfig backed up to $backup"
-            } else {
-                Write-Log -Level DEBUG -Message "  .wslconfig already up to date"
-                return
-            }
-        }
+    $path = Join-Path $env:USERPROFILE '.wslconfig'
+
+    if (-not (Test-Path $path)) {
         Set-Content -Path $path -Value $wslConfig -Encoding ASCII -Force
-        Write-Log -Level DEBUG -Message "  Wrote $path"
+        Write-Log -Level DEBUG -Message "  Wrote $path (file did not exist)"
+        return
     }
-} else {
-    Write-Log -Level WARN -Message "-SkipWSL flag set; WSL steps skipped"
+
+    $existing = Get-Content $path -Raw -ErrorAction SilentlyContinue
+    if ($existing -eq $wslConfig) {
+        Write-Log -Level DEBUG -Message "  $path already matches canonical config — no change"
+        return
+    }
+
+    if (-not $ForceWslConfig) {
+        Write-Log -Level WARN -Message "  $path exists and differs from canonical config."
+        Write-Log -Level WARN -Message "  Leaving it alone. Pass -ForceWslConfig to overwrite (with backup)."
+        return
+    }
+
+    $backup = "$path.bak-$($init.Stamp)"
+    Copy-Item $path $backup -Force
+    Set-Content -Path $path -Value $wslConfig -Encoding ASCII -Force
+    Write-Log -Level WARN -Message "  Overwrote $path (backup: $backup)"
 }
 
 # =============================================================================
 # Manual checklist
 # =============================================================================
 
-Invoke-Step -Name "Generate post-install TODO checklist on Desktop" -Action {
+Invoke-Step -Name "Generate post-install TODO checklist on Desktop" -Tags @('checklist') -Action {
     $todo = @"
 ================================================================
 MANUAL POST-INSTALL CHECKLIST  ($(Get-Date -Format 'yyyy-MM-dd HH:mm'))
@@ -522,8 +455,8 @@ REBOOT first — Windows features (Hyper-V, WSL, Sandbox) need it.
        -> Wallpaper slideshow every 30 min
 
 ================================================================
-Bootstrap log:  $Script:LogFile
-Full log dir:   $LogDir
+Bootstrap log:  $($init.LogFile)
+Full log dir:   $($init.LogDir)
 ================================================================
 "@
     $todoPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'TODO-post-install.txt'
@@ -537,7 +470,7 @@ Full log dir:   $LogDir
 
 Show-Summary
 
-$failed = ($Script:Summary | Where-Object { -not $_.Success }).Count
+$failed = ($script:Summary | Where-Object { -not $_.Success }).Count
 Write-Log -Level INFO -Message ""
 if ($failed -eq 0) {
     Write-Log -Level SUCCESS -Message "All steps OK. Reboot recommended."
