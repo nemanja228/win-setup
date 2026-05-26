@@ -4,7 +4,7 @@
 ; =============================================================================
 ; WtTransparent.ahk — toggle window transparency via global hotkeys.
 ;
-; Managed by win-setup. Deployed by scripts/Install-Profiles.ps1, auto-launched
+; Managed by win-setup, deployed by scripts/Install-Profiles.ps1, auto-launched
 ; on logon via a shortcut in the Startup folder.
 ;
 ; Hotkeys (work on whatever window has focus — "A" = active):

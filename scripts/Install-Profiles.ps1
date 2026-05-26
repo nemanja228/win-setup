@@ -239,6 +239,25 @@ function New-StartupShortcut {
     }
 }
 
+function Stop-AhkScriptProcess {
+    param([Parameter(Mandatory=$true)][string[]]$ScriptPaths)
+    # Find AutoHotkey processes whose CommandLine references any of $ScriptPaths,
+    # stop only those. Safe when no match (no-op). Other AHK scripts untouched.
+    # Waits for each killed process to actually exit so the file handle releases
+    # before we try to overwrite.
+    $procs = Get-CimInstance Win32_Process -Filter "Name LIKE 'AutoHotkey%'" -ErrorAction SilentlyContinue
+    foreach ($p in $procs) {
+        foreach ($path in $ScriptPaths) {
+            if ($p.CommandLine -and $p.CommandLine -like "*$path*") {
+                Write-Log -Level DEBUG -Message "    stopping AHK pid=$($p.ProcessId): $($p.CommandLine)"
+                Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+                Wait-Process -Id $p.ProcessId -Timeout 5 -ErrorAction SilentlyContinue
+                break
+            }
+        }
+    }
+}
+
 # =============================================================================
 # Categories
 # =============================================================================
@@ -380,13 +399,39 @@ if (Should-Install 'fonts') {
 # --- ahk ---
 
 if (Should-Install 'ahk') {
-    Invoke-Step -Name "ahk: startup shortcut for WtTransparent.ahk" -Tags @('profiles','ahk') -ContinueOnError -SkipOnDryRun -Action {
-        $src = Join-Path $repoRoot 'profiles\autohotkey\WtTransparent.ahk'
+    Invoke-Step -Name "ahk: stage WtTransparent.ahk + startup shortcut" -Tags @('profiles','ahk') -ContinueOnError -SkipOnDryRun -Action {
+        $src      = Join-Path $repoRoot 'profiles\autohotkey\WtTransparent.ahk'
+        $stageDir = Join-Path $env:LocalAppData 'win-setup\autohotkey'
+        $staged   = Join-Path $stageDir 'WtTransparent.ahk'
+
         if (-not (Test-Path -LiteralPath $src)) {
-            Write-Log -Level WARN -Message "  $src not found — skipping"
+            Write-Log -Level WARN -Message "  $src not found - skipping"
             return
         }
-        New-StartupShortcut -Target $src -ShortcutName 'WtTransparent'
+
+        if (-not (Test-Path -LiteralPath $stageDir)) {
+            New-Item -Path $stageDir -ItemType Directory -Force | Out-Null
+        }
+
+        $srcHash    = (Get-FileHash -LiteralPath $src -Algorithm SHA256).Hash
+        $stagedHash = if (Test-Path -LiteralPath $staged) {
+            (Get-FileHash -LiteralPath $staged -Algorithm SHA256).Hash
+        } else { '' }
+
+        if ($srcHash -ne $stagedHash) {
+            # Kill any AHK process holding the staged file OR the old repo path,
+            # so first migration after upgrade also unlocks the destination.
+            Stop-AhkScriptProcess -ScriptPaths @($staged, $src)
+            Copy-Item -LiteralPath $src -Destination $staged -Force
+            Write-Log -Level INFO -Message "  staged: $staged"
+        } else {
+            Write-Log -Level DEBUG -Message "  staged file up to date - skip copy"
+        }
+
+        # Shortcut points at the staged copy. New-StartupShortcut already
+        # overwrites a shortcut whose target differs, so migration from the
+        # old (repo-pointing) shortcut is automatic.
+        New-StartupShortcut -Target $staged -ShortcutName 'WtTransparent'
     }
 }
 
