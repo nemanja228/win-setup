@@ -8,8 +8,8 @@
     "keybindings": 
     [
         {
-            "id": "Terminal.OpenNewTab",
-            "keys": "ctrl+t"
+            "id": "Terminal.DuplicatePaneAuto",
+            "keys": "alt+shift+d"
         },
         {
             "id": "Terminal.CopyToClipboard",
@@ -20,20 +20,16 @@
             "keys": "ctrl+v"
         },
         {
-            "id": "Terminal.DuplicatePaneAuto",
-            "keys": "alt+shift+d"
-        },
-        {
-            "id": null,
-            "keys": "ctrl+shift+t"
+            "id": "Terminal.OpenNewTab",
+            "keys": "ctrl+t"
         },
         {
             "id": "Terminal.OpenNewWindow",
             "keys": "ctrl+n"
         },
         {
-            "id": null,
-            "keys": "ctrl+shift+n"
+            "id": "Terminal.ClosePane",
+            "keys": "ctrl+w"
         }
     ],
     "newTabMenu": 
