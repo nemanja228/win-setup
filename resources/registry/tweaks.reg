@@ -329,19 +329,25 @@ Windows Registry Editor Version 5.00
 "DelegationTerminal"="{E12CFF52-A866-4C77-9A90-F570A7AA2C6B}"
 
 ; ----- Precision Touchpad ----------------------------------------------------
+; Philosophy: touchpad used like a mouse. No taps so the palm can rest on it
+; absent-mindedly without firing actions. Fn keys handle volume + brightness,
+; so the gesture-for-media tradeoff isn't worth the false-positive risk.
+;
 ; Physical clicks only (bottom-left = left, bottom-right = right).
 ; Two-finger scroll + pinch zoom on. All taps, tap-drag, and 3/4-finger
 ; gestures off.
 ; ThreeFingerSlideEnabled/FourFingerSlideEnabled = 0xffff means "custom
 ; per-direction mode" — Windows writes this value (not 0) when you set all
 ; directions to Nothing in Settings. All direction keys = 0 = Nothing.
+; ScrollDirection: 1 = down motion scrolls down (mouse-wheel feel, Windows
+; default); 0 = down motion scrolls up (natural/touchscreen feel).
 [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad]
 "TapsEnabled"=dword:00000000
 "TwoFingerTapEnabled"=dword:00000000
 "TapAndDrag"=dword:00000000
 "RightClickZoneEnabled"=dword:00000001
 "PanEnabled"=dword:00000001
-"ScrollDirection"=dword:00000000
+"ScrollDirection"=dword:00000001
 "ZoomEnabled"=dword:00000001
 "ThreeFingerTapEnabled"=dword:00000000
 "CustomThreeFingerTap"=dword:00000000
