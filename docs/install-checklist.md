@@ -220,12 +220,13 @@ Some apps either aren't on winget, are version-pinned to a release winget doesn'
 
 ### Serbian eUprava (electronic government) tools
 
-These all require a citizen ID card with chip (lična karta) and a USB smart-card reader. Install in this order:
+These all require a citizen ID card with chip (lična karta) and a USB smart-card reader. Confirmed clean-install order that worked first-try on 2026-05-26 (24H2 build 26100):
 
-- [ ] **Reader driver** — usually generic CCID-compliant; Windows finds it automatically. If yours needs vendor driver, install before card middleware.
-- [ ] **TrustEdgeID** middleware — <https://www.eid.gov.rs/> (preuzimanje softvera). Required for card recognition.
-- [ ] **Čelik** — official card reader app. <https://www.mup.gov.rs/wps/portal/sr/usluge/aplikacije/celik>.
-- [ ] **ePorezi** — tax-portal client. <https://eporezi.purs.gov.rs/>.
+1. **VC++ redistributables (all versions)** — install before TrustEdge. TrustEdge's installer doesn't bundle these and silently breaks on missing runtimes if any version 2008–2015 is absent. Use the [`abbodi1406/vcredist`](https://github.com/abbodi1406/vcredist) all-in-one installer or equivalent multi-version pack.
+2. **TrustEdgeID** middleware — <https://www.eid.gov.rs/> (preuzimanje softvera). Required for card recognition.
+3. **Čelik** — official card reader app. <https://www.mup.gov.rs/wps/portal/sr/usluge/aplikacije/celik>.
+4. **ePorezi** — tax-portal client. <https://eporezi.purs.gov.rs/>.
+5. **Card-reader driver** — generic CCID-compliant readers are auto-detected. For **Gemalto IFD-Handler** based readers, install the vendor driver from the manufacturer's website. ⚠️ Windows refuses to load the Gemalto kernel driver while **Core isolation → Memory integrity** is enabled (signed but old). Disable via Settings → Privacy & security → Windows Security → Device security → Core isolation *before* installing the Gemalto driver, then re-enable afterward if desired.
 
 ### Manual settings and activation
 
