@@ -22,6 +22,18 @@ Invoke-Step -Name "Pre-flight: Windows build" -ContinueOnError -Action {
     }
 }
 
+Invoke-Step -Name "Pre-flight: PowerShell edition" -ContinueOnError -Action {
+    $edition = $PSVersionTable.PSEdition
+    $version = $PSVersionTable.PSVersion
+    Write-Log -Level DEBUG -Message "  PSEdition: $edition  PSVersion: $version"
+    if ($edition -eq 'Desktop') {
+        # Step 80 deploys to a hard-coded pwsh 7 location since Fix A, so this is
+        # informational. Kept because some future $PROFILE-dependent step might
+        # still trip on PS 5.1 host resolution.
+        Write-Log -Level WARN -Message "  Running under Windows PowerShell 5.1 (Desktop). pwsh 7 is preferred; re-run from pwsh after step 60 installs it."
+    }
+}
+
 Invoke-Step -Name "Pre-flight: network connectivity" -ContinueOnError -Action {
     $reachable = Test-Connection -ComputerName 'github.com' -Count 1 -Quiet -ErrorAction SilentlyContinue
     if (-not $reachable) {

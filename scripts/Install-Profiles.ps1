@@ -308,15 +308,20 @@ if (Should-Install 'git') {
 # --- pwsh ---
 
 if (Should-Install 'pwsh') {
-    Invoke-Step -Name "pwsh: deploy `$PROFILE.CurrentUserAllHosts" -Tags @('profiles','pwsh') -ContinueOnError -SkipOnDryRun -Action {
+    Invoke-Step -Name "pwsh: deploy profile to pwsh 7 + Windows PowerShell 5.1" -Tags @('profiles','pwsh') -ContinueOnError -SkipOnDryRun -Action {
         $src = Join-Path $repoRoot 'profiles\powershell\Microsoft.PowerShell_profile.ps1'
-        $dst = $PROFILE.CurrentUserAllHosts
-        if (-not $dst) {
-            # If running under powershell.exe without an established $PROFILE.CurrentUserAllHosts,
-            # synthesize the standard path.
-            $dst = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\profile.ps1'
+        # Hard-target both PS host directories. Do NOT use $PROFILE.CurrentUserAllHosts —
+        # it resolves to whichever host launched the script, leaving the other host
+        # unconfigured. Profile internally gates PS 5.1-incompatible features (PSReadLine
+        # 2.2+, etc.) via $PSVersionTable checks, so it's safe in both.
+        $documents = [Environment]::GetFolderPath('MyDocuments')
+        $targets = @(
+            (Join-Path $documents 'PowerShell\Microsoft.PowerShell_profile.ps1')         # pwsh 7
+            (Join-Path $documents 'WindowsPowerShell\Microsoft.PowerShell_profile.ps1')  # PS 5.1
+        )
+        foreach ($dst in $targets) {
+            Copy-OrLink -Source $src -Target $dst -Symlink:$Symlink -Force:$Force
         }
-        Copy-OrLink -Source $src -Target $dst -Symlink:$Symlink -Force:$Force
     }
 }
 
