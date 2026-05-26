@@ -21,7 +21,7 @@ function Get-ResourcePath {
 
 .EXAMPLE
     Get-ResourcePath -Name 'registry/tweaks.reg'
-    # -> E:\code\windows-system-config\resources\registry\tweaks.reg
+    # -> E:\code\win-setup\resources\registry\tweaks.reg
 
 .EXAMPLE
     Get-ResourcePath -Area 'post-install' -Name 'Notepad++.Notepad++.ps1'

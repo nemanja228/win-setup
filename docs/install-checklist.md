@@ -123,7 +123,7 @@ See [`git-github.md`](git-github.md) for the multi-account URL trick, `includeIf
 
 ## 10. Run `bootstrap.ps1` (the workhorse)
 
-Clone or copy this repo somewhere (e.g. `$env:USERPROFILE\code\windows-system-config`). Open an **elevated** PowerShell, `cd` into it, and run:
+Clone or copy this repo somewhere (e.g. `$env:USERPROFILE\code\win-setup`). Open an **elevated** PowerShell, `cd` into it, and run:
 
 ```powershell
 .\bootstrap.ps1 -Verify     # dry-run first to confirm what'll happen

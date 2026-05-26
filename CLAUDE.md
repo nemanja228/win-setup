@@ -13,7 +13,7 @@ Generic-by-default: machine-specific quirks (vendor app settings, panel quirks, 
 ## Repo layout
 
 ```
-windows-system-config/
+win-setup/
 ├── README.md                      # Entry point + index + quickstart
 ├── CLAUDE.md                      # This file
 ├── .gitattributes, .gitignore

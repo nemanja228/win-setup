@@ -9,9 +9,9 @@ Designed for .NET / WSL dev work, music production with an external audio interf
 ## Quick start
 
 ```powershell
-# Clone somewhere — e.g. $env:USERPROFILE\code\windows-system-config
-git clone https://github.com/<you>/windows-system-config
-cd windows-system-config
+# Clone somewhere — e.g. $env:USERPROFILE\code\win-setup
+git clone https://github.com/<you>/win-setup
+cd win-setup
 
 # Dry-run first to see what would happen (no admin needed for parsing)
 .\bootstrap.ps1 -Verify
@@ -35,7 +35,7 @@ For the why behind each piece, see **[`docs/setup-guide.md`](docs/setup-guide.md
 ## Repo layout
 
 ```
-windows-system-config/
+win-setup/
 ├── bootstrap.ps1                  # Thin orchestrator: imports module, dot-sources steps/
 ├── lib/WinSetup/                  # Logging + helpers (Get-ResourcePath, Import-RegFilePerValue)
 ├── steps/                         # 00-preflight ... 80-profiles, runnable standalone

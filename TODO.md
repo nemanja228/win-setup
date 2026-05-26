@@ -4,7 +4,7 @@
 
 Claude Code config (`~/.claude/CLAUDE.md`, `settings.json`, hooks, agents, commands, skills) currently lives outside this repo and is not bootstrapped onto fresh machines.
 
-**Decision:** keep it OUT of `windows-system-config`. Reasons:
+**Decision:** keep it OUT of `win-setup`. Reasons:
 
 - This repo is Windows-only by charter; Claude Code config is cross-platform (same files for WSL / Linux / macOS).
 - Churn rates don't match — Windows base settles for months, Claude Code config (skills, hooks, agent prompts) iterates weekly. Mixing the two muddies `git log` for both.

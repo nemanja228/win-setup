@@ -26,7 +26,7 @@
     PrivateData = @{
         PSData = @{
             Tags       = @('win-setup', 'logging', 'windows', 'bootstrap')
-            ProjectUri = 'https://github.com/nemanja228/windows-system-config'
+            ProjectUri = 'https://github.com/nemanja228/win-setup'
         }
     }
 }

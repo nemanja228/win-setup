@@ -26,7 +26,7 @@ Sometimes settings (file extensions visible, taskbar alignment, dark mode) survi
 ## The fix
 
 ```powershell
-cd $env:USERPROFILE\code\windows-system-config   # or wherever you cloned
+cd $env:USERPROFILE\code\win-setup   # or wherever you cloned
 .\bootstrap.ps1 -PostUpdate
 ```
 
@@ -81,7 +81,7 @@ If you want to defend against silent drift between feature updates (some updates
 
 ```powershell
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-    -Argument '-NoProfile -WindowStyle Hidden -File "C:\Users\<you>\code\windows-system-config\bootstrap.ps1" -Steps privacy'
+    -Argument '-NoProfile -WindowStyle Hidden -File "C:\Users\<you>\code\win-setup\bootstrap.ps1" -Steps privacy'
 
 $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At '3am'
 
