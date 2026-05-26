@@ -1,0 +1,138 @@
+Windows Registry Editor Version 5.00
+
+; ============================================================================
+; win-setup / tweaks.personal.reg
+; Maintainer's personal Windows taste. Imported by the same step 20 that
+; imports tweaks.reg (per-value via Import-RegFilePerValue).
+;
+; FORKERS: delete this file or edit freely. tweaks.reg has the universal
+; anti-crap + dev defaults that anyone reaching for this repo wants; this
+; file is the maintainer's preferences on top of that:
+;
+;   - Regional pack: Serbia (271/RS) + en-US UI + dd.MM.yyyy + 24-hour clock
+;     + Monday first day of week + Serbian Latin secondary keyboard
+;   - Dark mode (system + apps)
+;   - Taskbar: left-aligned, seconds in clock
+;   - Wallpaper rendering: Fill (not letterbox/Fit)
+;   - Background + lock screen slideshow on a 30-min shuffle
+;   - OneDrive autostart off (Run-key + StartupApproved binary)
+;   - Precision Touchpad as a mouse (no taps, no gestures, mouse-wheel scroll)
+;
+; Time zone is set via tzutil in steps/30-region.ps1 (binary struct in HKLM
+; is painful in .reg), so changing your region here ALSO requires editing
+; that step file.
+; ============================================================================
+
+; ----- Regional: locale, formats, geo, keyboard ------------------------------
+; en-US UI/numbers + European dd.MM.yyyy date + 24-hour clock + Serbia (271/RS).
+[HKEY_CURRENT_USER\Control Panel\International]
+"Locale"="00000409"
+"LocaleName"="en-US"
+"sShortDate"="dd.MM.yyyy"
+"sLongDate"="dddd, d MMMM yyyy"
+"sShortTime"="HH:mm"
+"sTimeFormat"="HH:mm:ss"
+"iTime"="1"
+"iTLZero"="1"
+"iDate"="1"
+"iFirstDayOfWeek"="0"
+"sDecimal"="."
+"sThousand"=","
+"sList"=","
+"sMonDecimalSep"="."
+"sMonThousandSep"=","
+"sCurrency"="$"
+"iCurrDigits"="2"
+"iCurrency"="0"
+"iNegCurr"="0"
+"iMeasure"="0"
+
+[HKEY_CURRENT_USER\Control Panel\International\Geo]
+"Name"="RS"
+"Nation"="271"
+
+; Keyboard layouts: 1 = en-US (default), 2 = Serbian Latin (Alt+Shift to swap)
+[HKEY_CURRENT_USER\Keyboard Layout\Preload]
+"1"="00000409"
+"2"="0000081a"
+
+; ----- Dark mode (system + apps) — see setup-guide §7 OLED preservation ------
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"AppsUseLightTheme"=dword:00000000
+"SystemUsesLightTheme"=dword:00000000
+
+; ----- Taskbar: left alignment, seconds in clock -----------------------------
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"TaskbarAl"=dword:00000000
+"ShowSecondsInSystemClock"=dword:00000001
+
+; ----- Wallpaper rendering ---------------------------------------------------
+; Fill (10): crops image to cover full panel — no bars. Fit (6) would give true-black
+; letterbox bars on OLED (pixel off = less aging) but Fill is better for mixed slideshows.
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"WallpaperStyle"="10"
+"TileWallpaper"="0"
+
+; ----- Background + lock screen slideshow (OLED-safe) ------------------------
+; 30-min shuffle slideshow on both desktop and lock screen. SlideshowAutoLock=0
+; means the lock screen slideshow does NOT prevent the normal display-off timeout
+; (respects powercfg display timeout — does not hold a wake lock).
+[HKEY_CURRENT_USER\Control Panel\Personalization\Desktop Slideshow]
+"Interval"=dword:001b7740
+"Shuffle"=dword:00000001
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers]
+"BackgroundType"=dword:00000002
+"SlideshowSourceDirectoriesSet"=dword:00000001
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Lock Screen]
+"SlideshowEnabled"=dword:00000001
+"SlideshowDuration"=dword:001b7740
+"SlideshowAutoLock"=dword:00000000
+"SlideshowSourceDirectoriesSet"=dword:00000001
+
+; ----- OneDrive: disable autostart -------------------------------------------
+; Remove the Run-key entry that OneDrive's installer plants.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run]
+"OneDrive"=-
+
+; Mirror the Settings > Startup > OneDrive toggle to "off". The binary value
+; encodes (enabled-flag, timestamp). 03 00 ... 00 = explicitly disabled by user.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run]
+"OneDrive"=hex:03,00,00,00,00,00,00,00,00,00,00,00
+
+; ----- Precision Touchpad ----------------------------------------------------
+; Philosophy: touchpad used like a mouse. No taps so the palm can rest on it
+; absent-mindedly without firing actions. Fn keys handle volume + brightness,
+; so the gesture-for-media tradeoff isn't worth the false-positive risk.
+;
+; Physical clicks only (bottom-left = left, bottom-right = right).
+; Two-finger scroll + pinch zoom on. All taps, tap-drag, and 3/4-finger
+; gestures off.
+; ThreeFingerSlideEnabled/FourFingerSlideEnabled = 0xffff means "custom
+; per-direction mode" — Windows writes this value (not 0) when you set all
+; directions to Nothing in Settings. All direction keys = 0 = Nothing.
+; ScrollDirection: 1 = down motion scrolls down (mouse-wheel feel, Windows
+; default); 0 = down motion scrolls up (natural/touchscreen feel).
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad]
+"TapsEnabled"=dword:00000000
+"TwoFingerTapEnabled"=dword:00000000
+"TapAndDrag"=dword:00000000
+"RightClickZoneEnabled"=dword:00000001
+"PanEnabled"=dword:00000001
+"ScrollDirection"=dword:00000001
+"ZoomEnabled"=dword:00000001
+"ThreeFingerTapEnabled"=dword:00000000
+"CustomThreeFingerTap"=dword:00000000
+"ThreeFingerSlideEnabled"=dword:0000ffff
+"ThreeFingerUp"=dword:00000000
+"ThreeFingerDown"=dword:00000000
+"ThreeFingerLeft"=dword:00000000
+"ThreeFingerRight"=dword:00000000
+"FourFingerTapEnabled"=dword:00000000
+"CustomFourFingerTap"=dword:00000000
+"FourFingerSlideEnabled"=dword:0000ffff
+"FourFingerUp"=dword:00000000
+"FourFingerDown"=dword:00000000
+"FourFingerLeft"=dword:00000000
+"FourFingerRight"=dword:00000000

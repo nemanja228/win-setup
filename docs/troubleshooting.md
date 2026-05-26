@@ -21,8 +21,8 @@ Per-run files share a `<yyyyMMdd-HHmmss>` stamp:
 | `oosu-<stamp>.log` | O&O ShutUp10++ stdout. |
 | `oosu-<stamp>.log.err` | OOSU10 stderr. |
 | `win11debloat-<stamp>.log` | Win11Debloat transcript. |
-| `reg-import-<stamp>.log` | Per-value tweaks.reg import results from step 20. |
-| `reg-import-post-apps-<stamp>.log` | Per-value re-import results from step 60 (post-winget). |
+| `reg-import-<stamp>.log` | Per-value tweaks.reg + tweaks.personal.reg import results from step 20 (both files append to the same log). |
+| `reg-import-post-apps-<stamp>.log` | Per-value re-import of tweaks.reg only from step 60 (post-winget). |
 
 Each line in the master log is timestamped:
 

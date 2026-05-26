@@ -55,7 +55,7 @@ win-setup/
 │   ├── autounattend/              # autounattend.xml template + renderer
 │   ├── debloat/                   # Win11Debloat CustomAppsList.txt
 │   ├── shutup/                    # O&O ShutUp10++ saved cfg
-│   ├── registry/                  # tweaks.reg
+│   ├── registry/                  # tweaks.reg (universal+dev) + tweaks.personal.reg (taste)
 │   └── winget/                    # apps.{common,dev,work,personal}.json
 │
 ├── post-install/                  # Per-app hooks (auto-discovered by 61-app-extras)
@@ -174,7 +174,7 @@ Every action is wrapped in `Invoke-Step -Name <label> -Tags @(...) [-ContinueOnE
 Module helpers used by steps:
 
 - **`Get-ResourcePath -Name 'registry/tweaks.reg'`** — resolves a path under `resources/` (or `-Area <other>` for `post-install/`, `profiles/`, etc.) against the repo root, regardless of where the calling script lives.
-- **`Import-RegFilePerValue -Path <file> -DetailLog <path>`** — splits a `.reg` into one-value temp files, imports each, returns a structured result `{ OkCount, FailCount, Failed[] }`. Used by step 20 (initial tweaks.reg) AND step 60 (post-apps re-import to clean up installer-created context-menu junk like Git Bash). Also handles `[-HKEY_...]` key-delete entries needed for the Open-with-Notepad / Git Bash / Git GUI removals.
+- **`Import-RegFilePerValue -Path <file> -DetailLog <path>`** — splits a `.reg` into one-value temp files, imports each, returns a structured result `{ OkCount, FailCount, Failed[] }`. Used by step 20 (both `tweaks.reg` and `tweaks.personal.reg`, results aggregated into one summary row) AND step 60 (post-apps re-import of `tweaks.reg` only, to clean up installer-created context-menu junk like Git Bash). Also handles `[-HKEY_...]` key-delete entries needed for the Open-with-Notepad / Git Bash / Git GUI removals.
 - **`Get-StepSummary`** — returns `$script:Summary` across the module boundary (the module's `$script:` scope is private, so bootstrap and 61-app-extras can't read it directly; this helper does).
 - **`Add-DefenderExclusion -Path <string[]> [-Source <label>]`** — wrapper around `Add-MpPreference -ExclusionPath` with structured logging. Idempotent (Defender no-ops on already-excluded paths). Called from per-app post-install hooks so each app's exclusion lives next to its other setup (VS Code → `~/.vscode`, .NET SDK → `~/.nuget`, REAPER → `~/Documents/Reaper Media`). Replaces the old centralized `50-defender.ps1` step.
 
@@ -185,7 +185,7 @@ Module helpers used by steps:
 3. **`20-debloat.ps1`** (`core, debloat`):
    - Win11Debloat — `iex` from `https://debloat.raphi.re/`, `-RunDefaults -Silent`. `CustomAppsList.txt` copied to `%TEMP%\Win11Debloat\Config\` first.
    - O&O ShutUp10++ — `OOSU10.exe` downloaded fresh to `%TEMP%`, applied with `ooshutup10.cfg` and `/quiet`. Tagged `core, debloat, privacy`.
-   - `tweaks.reg` — per-value import via `Import-RegFilePerValue`. Detailed per-value log at `reg-import-<stamp>.log`; bootstrap log shows a WARN per failure with key + value + exit code + reg.exe output. The step `throw`s only if ALL values fail. Tagged `core, debloat, privacy, config`.
+   - `tweaks.reg` + `tweaks.personal.reg` — per-value import via `Import-RegFilePerValue`, both files in one step (OkCount / FailCount aggregated). Detailed per-value log at `reg-import-<stamp>.log`; bootstrap log shows a WARN per failure with key + value + exit code + reg.exe output. The step `throw`s only if ALL values across both files fail; missing personal file just WARNs. Tagged `core, debloat, privacy, config`.
 4. **`30-region.ps1`** (`core, config`) — `Central Europe Standard Time` via `Set-TimeZone` (no-op when already correct), taskbar autohide via `StuckRects3` binary blob (flips bit 0 of byte 8 — 0x02 = visible, 0x03 = autohidden; restarts explorer.exe).
 5. **`40-power.ps1`** (`core, power`) — duplicate High Performance scheme if not present, disable USB selective suspend on AC+DC (DPC latency for EVO 4), disable Link State Power Management on AC, set display/sleep timeouts + lid=sleep + `powercfg /hibernate off`.
 6. **`45-devdrive.ps1`** (`devdrive`) — auto-detects a Dev Drive (ReFS + Fixed, confirmed via `fsutil devdrv query`), then redirects package-manager caches (NuGet, npm, yarn, Cargo, pip, Gradle, Vcpkg, Go) to `<DevDrive>:\dev\packages\<tool>\` via per-tool user-scope env vars. Idempotent (skips already-correct mappings, WARNs+overrides ones pointing elsewhere). No-op when no Dev Drive exists. Does NOT migrate existing caches — they're abandoned, tools rebuild on demand. Drive letter is NEVER assumed; detected from volumes.
@@ -242,13 +242,14 @@ Each line is timestamped; per-value reg import logs are line-by-line — search 
 
 ## `tweaks.reg` notes
 
-Source of truth for HKCU/HKLM keys not covered by Win11Debloat or O&O ShutUp10++. `bootstrap.ps1` imports it twice per full run: step 20 (initial pass) and step 60 (post-apps cleanup, because Git's installer re-adds shell context-menu entries that step 20 couldn't remove yet).
+Source of truth for HKCU/HKLM keys not covered by Win11Debloat or O&O ShutUp10++. **Split into two files** under `resources/registry/`:
 
-Sections in current order: File Explorer, Search & Start menu, Taskbar, Copilot/AI, Privacy, Notifications/suggestions/ads, AllowOnlineTips, Storage Sense, Edge (no startup boost/prelaunch/preload), Activity history, optional commented blocks (mouse accel, transparency), Regional pack (en-US locale + dd.MM.yyyy + 24-hour + Monday first + RS Geo + Serbian Latin keyboard), Consumer features policy, Cortana service-level kill, Feedback prompts, Dark mode, Taskbar alignment + seconds in clock, Perf (StartupDelay/MenuShowDelay/AutoEndTasks/HungAppTimeout), Wallpaper slideshow (30-min OLED-safe), commented NlaSvc EnableActiveProbing.
+- **`tweaks.reg`** — universal anti-crap + dev-standard defaults. Anyone forking probably wants this kept intact: File Explorer sanity (show extensions, hidden files, ThisPC, etc.), no-Bing search, hide Task View/Chat/Teams, Copilot/Recall/Click-to-Do kills, ad/telemetry/tracking disables, suggestion blocks (lock screen, Settings home, online tips), Storage Sense off, Edge anti-bloat, Activity history off, Consumer features policy, Cortana kill, Feedback prompts off, StartupDelay=0, MenuShowDelay/AutoEndTasks/HungAppTimeout, classic Win10 right-click context menu, "Open with Notepad" + Git Bash/GUI shell verb removals, clipboard history on, HAGS, Developer mode + sudo inline + LongPathsEnabled, default terminal = Windows Terminal. Plus commented-out optional blocks (transparency off, mouse accel disable, NlaSvc EnableActiveProbing).
+- **`tweaks.personal.reg`** — maintainer's Windows taste: regional pack (Serbia/CET/en-US/dd.MM.yyyy/24h/Monday-first/Serbian Latin keyboard), dark mode, left-aligned taskbar + seconds in clock, wallpaper Fill rendering, 30-min slideshow on desktop + lock screen, OneDrive autostart disabled (Run-key deletion + StartupApproved binary), Precision Touchpad "as mouse" block (all taps + 3/4-finger gestures off, mouse-wheel scroll direction).
 
-**New entries added in Phase 1**: classic Win10 right-click context menu (HKCU CLSID InprocServer32 empty default), OneDrive autostart disabled (Run-key value deletion + StartupApproved binary), `[-HKLM\…\*\shell\Open with Notepad]` key delete, `[-HKLM\…\Directory\{Background\,}shell\git_{shell,gui}]` four key deletes.
+Step 20 imports both files in a single `Invoke-Step` summary row. Step 60 re-imports **only `tweaks.reg`** because the post-apps cleanup target is installer-added shell verb entries (Git Bash etc.) — none of which live in the personal file.
 
-Time zone is NOT in `tweaks.reg` (binary struct, painful in `.reg` form); it's handled by the dedicated `Set-TimeZone` step in `30-region.ps1`.
+Time zone is NOT in either file (binary struct, painful in `.reg` form); handled by the dedicated `Set-TimeZone` step in `30-region.ps1`. If you change region in `tweaks.personal.reg`, also update that step file.
 
 ### Known TaskbarDa issue
 
@@ -266,7 +267,7 @@ Each layer fills gaps the previous one leaves — see `docs/debloat.md`:
 1. **autounattend** (cleanest — strips Appx at image time before first boot)
 2. **Win11Debloat** (apps + UI tweaks)
 3. **O&O ShutUp10++** (granular privacy toggles via the `.cfg`)
-4. **`tweaks.reg`** (everything else, with the post-apps re-import catching installer-added context-menu junk)
+4. **`tweaks.reg` + `tweaks.personal.reg`** (everything else; tweaks.reg = universal/dev defaults, tweaks.personal.reg = maintainer taste. tweaks.reg gets a post-apps re-import in step 60 to catch installer-added context-menu junk; personal file imports once in step 20)
 
 There's an explicit "do not remove" list in `docs/debloat.md` (e.g. `Microsoft.NET.*`, `VCLibs`, `WindowsAppRuntime`, WebView2, Microsoft Store) — dependencies for dev work or modern Windows apps. Stripping them silently breaks things later.
 
@@ -276,7 +277,7 @@ There's an explicit "do not remove" list in `docs/debloat.md` (e.g. `Microsoft.N
 - **Adding apps**: append to the right `resources/winget/apps.<tier>.json`. winget schema 2.0. `--ignore-unavailable` is already passed by step 60.
 - **Adding a per-app hook**: drop `post-install/<exact-winget-package-id>.ps1`. Step 61 finds it on next run, hashes it, runs only when installed + hash changed. Hook must be internally idempotent.
 - **Adding Appx removals**: one PackageFamilyName per line in `resources/debloat/CustomAppsList.txt`. Verify exact names with `Get-AppxPackage -AllUsers | Out-GridView` before committing — OEM names drift.
-- **Registry tweaks**: prefer `resources/registry/tweaks.reg` over inline PowerShell so changes survive without `bootstrap.ps1`. Group by section with `;`-prefixed headers. Note `dword:` requires no `0x` prefix. REG_SZ values use plain quotes (`"MenuShowDelay"="200"`). Key-delete form `[-HKLM\…]` is supported by `Import-RegFilePerValue`.
+- **Registry tweaks**: prefer `resources/registry/tweaks.reg` (universal/dev) or `resources/registry/tweaks.personal.reg` (maintainer taste — regional pack, dark mode, taskbar alignment, slideshow, OneDrive off, touchpad-as-mouse) over inline PowerShell so changes survive without `bootstrap.ps1`. Classify at write time: anything a forker would plausibly want different goes in the personal file. Group by section with `;`-prefixed headers. Note `dword:` requires no `0x` prefix. REG_SZ values use plain quotes (`"MenuShowDelay"="200"`). Key-delete form `[-HKLM\…]` is supported by `Import-RegFilePerValue`.
 - **Privacy toggles**: regenerate `resources/shutup/ooshutup10.cfg` interactively via `OOSU10.exe`, **File → Export**. Don't hand-edit.
 - **Adding a module helper**: write `lib/WinSetup/Public/<Verb-Noun>.ps1` with a `function Verb-Noun { ... }` block. Add the name to `FunctionsToExport` in `WinSetup.psd1`. The loader auto-discovers it.
 - **Adding a snippet**: drop `snippets/<Verb-Noun>.ps1`. Must be fully standalone (no module dependency) so it can be `irm`'d to any machine. Document in `snippets/README.md`. Use `[CmdletBinding(SupportsShouldProcess)]` if destructive, support `-WhatIf`. Make it idempotent.

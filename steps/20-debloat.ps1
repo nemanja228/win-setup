@@ -55,25 +55,40 @@ Invoke-Step -Name "O&O ShutUp10++ (apply saved privacy config)" -Tags @('core','
     Write-Log -Level DEBUG -Message "  OOSU10 exit code: 0"
 }
 
-Invoke-Step -Name "Apply registry tweaks (tweaks.reg)" -Tags @('core','debloat','privacy','config') -ContinueOnError -SkipOnDryRun -Action {
-    $reg = Get-ResourcePath -Name 'registry/tweaks.reg'
-    if (-not (Test-Path $reg)) {
-        Write-Log -Level WARN -Message "  tweaks.reg not found at $reg — skipping."
-        return
+Invoke-Step -Name "Apply registry tweaks (tweaks.reg + tweaks.personal.reg)" -Tags @('core','debloat','privacy','config') -ContinueOnError -SkipOnDryRun -Action {
+    # Two files: tweaks.reg (universal anti-crap + dev defaults) and the
+    # optional tweaks.personal.reg (maintainer taste). Forkers can delete
+    # the personal file entirely; we WARN but don't fail on its absence.
+    $files = @('registry/tweaks.reg', 'registry/tweaks.personal.reg')
+
+    $okTotal   = 0
+    $failTotal = 0
+    $allFailed = @()
+
+    foreach ($rel in $files) {
+        $path = Get-ResourcePath -Name $rel
+        if (-not (Test-Path $path)) {
+            Write-Log -Level WARN -Message "  $rel not found at $path — skipping."
+            continue
+        }
+        Write-Log -Level DEBUG -Message "  Importing $rel"
+        $result = Import-RegFilePerValue -Path $path -DetailLog $RegLog
+        $okTotal   += $result.OkCount
+        $failTotal += $result.FailCount
+        $allFailed += $result.Failed
+        Write-Log -Level DEBUG -Message ("    {0}: {1} OK, {2} failed" -f $rel, $result.OkCount, $result.FailCount)
     }
 
-    $result = Import-RegFilePerValue -Path $reg -DetailLog $RegLog
-
-    if ($result.FailCount -gt 0) {
-        Write-Log -Level WARN -Message "  $($result.FailCount) of $($result.OkCount + $result.FailCount) registry values failed to import:"
-        foreach ($f in $result.Failed) {
+    if ($failTotal -gt 0) {
+        Write-Log -Level WARN -Message "  $failTotal of $($okTotal + $failTotal) registry values failed to import:"
+        foreach ($f in $allFailed) {
             Write-Log -Level WARN -Message ("    ! {0}\{1}  (exit {2}): {3}" -f $f.Key, $f.Value, $f.ExitCode, $f.Output)
         }
         Write-Log -Level WARN -Message "  Detailed log: $RegLog"
-        if ($result.OkCount -eq 0) {
-            throw "All $($result.FailCount) registry values failed to import. See $RegLog"
+        if ($okTotal -eq 0) {
+            throw "All $failTotal registry values failed to import. See $RegLog"
         }
     } else {
-        Write-Log -Level DEBUG -Message "  All $($result.OkCount) values imported OK"
+        Write-Log -Level DEBUG -Message "  All $okTotal values imported OK across $($files.Count) file(s)"
     }
 }

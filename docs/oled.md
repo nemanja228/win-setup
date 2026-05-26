@@ -33,7 +33,7 @@ There's no setting page for this — it just works once the OS knows it's drivin
 3. **Brightness 50–70%** — sweet spot between visibility and panel longevity. 100% sustained for hours is the real risk; brightness changes alone are fine.
 4. **Disable HDR for SDR content.** HDR-on-SDR makes static UI elements drive the panel harder than they need to.
 5. **Screensaver after 5–10 min idle** — dark or moving pattern. Not the same as display-off; saver before sleep gives the panel a uniformity exercise.
-6. **Wallpaper slideshow every 30 min** — desktop never has identical pixels for long. Same for lock screen. `tweaks.reg` sets a 30-minute shuffle interval; you supply the wallpaper folder.
+6. **Wallpaper slideshow every 30 min** — desktop never has identical pixels for long. Same for lock screen. `tweaks.personal.reg` sets a 30-minute shuffle interval; you supply the wallpaper folder. (If you forked and deleted the personal file, set up the slideshow manually via Settings → Personalization → Background.)
 7. **Don't pin a maximized IDE / browser at identical coordinates for 10-hour sessions.** Alt-tab away occasionally, snap to different halves, change zoom. The pixels notice.
 8. **Vendor-app panel-care features** — see your machine doc. Most laptops ship a Pixel Refresh (idle-time uniformity exercise) and Pixel Shift (subtle 1-pixel UI offset) feature that supplements the OS-level dimming.
 

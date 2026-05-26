@@ -167,7 +167,7 @@ The repo is generic-by-default but ships with the maintainer's opinions baked in
 - **`resources/winget/apps.dev.json` / `apps.common.json`** — narrower personalization but still review.
 - **`resources/shutup/ooshutup10.cfg`** — opinionated privacy choices. Re-export from the OOSU10 GUI to your own taste (File → Export). Don't hand-edit.
 - **`resources/debloat/CustomAppsList.txt`** — Appx removal list. Run `Get-AppxPackage -AllUsers | Out-GridView` first to confirm names; OEM packages drift across vendors.
-- **`resources/registry/tweaks.reg`** — the "Regional pack" block sets Serbia/CET/en-US locale + dd.MM.yyyy + 24-hour + Monday-first + Serbian Latin keyboard. Comment out or replace if you're not in CET.
+- **`resources/registry/tweaks.personal.reg`** — maintainer's Windows taste (regional pack: Serbia/CET/en-US/dd.MM.yyyy/24h/Monday-first/Serbian Latin keyboard; dark mode; left-aligned taskbar; wallpaper slideshow; OneDrive autostart off; precision-touchpad-as-mouse). Delete the file entirely, or edit selectively. The sibling `tweaks.reg` has the universal anti-crap + dev defaults; leave it alone.
 - **`steps/30-region.ps1`** — sets time zone to `Central Europe Standard Time`. Hard-coded; change to your time zone string.
 - **`steps/40-power.ps1`** — High Performance plan tuned for a USB audio interface (USB selective suspend off, LSPM off on AC). Not relevant if you don't run a DAW; the High Performance plan itself is opinionated.
 - **`docs/machines/`** — drop in `docs/machines/<vendor>-<model>.md` for your hardware. The ASUS Zenbook S16 doc is the maintainer's; ignore or delete on fork.
