@@ -6,7 +6,8 @@
         { "PackageIdentifier": "Resplendence.LatencyMon" },
         { "PackageIdentifier": "Cockos.REAPER" },
         { "PackageIdentifier": "TuxGuitar.TuxGuitar" },
-        { "PackageIdentifier": "NVIDIA.GeForceNow" }
+        { "PackageIdentifier": "NVIDIA.GeForceNow" },
+        { "PackageIdentifier": "qBittorrent.qBittorrent" }
       ],
       "SourceDetails": {
         "Argument": "https://cdn.winget.microsoft.com/cache",
